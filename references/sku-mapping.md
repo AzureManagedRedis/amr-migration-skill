@@ -31,7 +31,7 @@ The scripts automatically calculate monthly costs based on:
 - **AMR**: HA (×2 nodes) or non-HA (×1 node)
 - **ACR Basic**: Single node (×1)
 - **ACR Standard**: Always HA (×2 nodes)
-- **ACR Premium**: HA × shards × replicas per shard
+- **ACR Premium**: Always HA shards × (replicas per shard + 1)
 
 See [pricing-tiers.md](pricing-tiers.md) for detailed calculation rules.
 
