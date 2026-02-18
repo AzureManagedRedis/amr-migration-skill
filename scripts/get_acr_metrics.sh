@@ -4,7 +4,7 @@
 #
 # Requires: Azure CLI logged in (az login), python3, curl
 #
-# Retrieves max values for last N days (default 30):
+# Retrieves Peak, P95 and Average values for last N days (default 30):
 #   - Used Memory RSS (bytes)
 #   - Server Load (%)
 #   - Connected Clients
@@ -29,9 +29,8 @@ usage() {
     echo "  ./get_acr_metrics.sh abc123-def456 my-rg my-redis-cache"
     echo "  ./get_acr_metrics.sh abc123-def456 my-rg my-redis-cache 7"
     echo ""
-    echo "Output includes:"
+    echo "Output includes (Peak, P95, Average for each):"
     echo "  - Used Memory (bytes and GB)"
-    echo "  - Used Memory Percentage"
     echo "  - Server Load (%)"
     echo "  - Connected Clients"
     echo "  - Network Bandwidth (bytes/sec)"
@@ -72,10 +71,10 @@ echo ""
 RESOURCE_URI="/subscriptions/${SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Cache/Redis/${CACHE_NAME}"
 METRICS="usedmemoryRss,serverLoad,connectedclients,cacheRead,cacheWrite"
 TIMESPAN="P${DAYS}D"
-INTERVAL="PT1H"  # 1 hour intervals to reduce response size
+INTERVAL="PT1H"  # 1 hour intervals for P95 calculation
 API_VERSION="2023-10-01"
 
-URL="https://management.azure.com${RESOURCE_URI}/providers/microsoft.insights/metrics?api-version=${API_VERSION}&metricnames=${METRICS}&timespan=${TIMESPAN}&interval=${INTERVAL}&aggregation=Maximum"
+URL="https://management.azure.com${RESOURCE_URI}/providers/microsoft.insights/metrics?api-version=${API_VERSION}&metricnames=${METRICS}&timespan=${TIMESPAN}&interval=${INTERVAL}&aggregation=Maximum,Average"
 
 echo "Querying metrics..."
 echo ""
@@ -91,43 +90,69 @@ if echo "$RESPONSE" | grep -q '"code":'; then
 fi
 
 echo "------------------------------------------------------------"
-echo "METRICS RESULTS (Maximum values over last $DAYS days)"
+echo "METRICS RESULTS (over last $DAYS days)"
 echo "------------------------------------------------------------"
 
 # Parse JSON using python3 (available on most Linux/Mac systems)
 echo "$RESPONSE" | python3 -c "
-import sys, json
+import sys, json, math
+
+def percentile95(values):
+    if not values:
+        return None
+    s = sorted(values)
+    idx = math.ceil(0.95 * len(s)) - 1
+    return s[idx]
+
+def format_value(name, unit, val):
+    if val is None:
+        return 'N/A'
+    if name == 'Used Memory RSS':
+        gb = round(val / (1024**3), 2)
+        return f'{val:,.0f} bytes ({gb} GB)'
+    elif unit == 'Percent':
+        return f'{val:.1f} %'
+    elif unit == 'BytesPerSecond':
+        mbs = round(val / (1024**2), 2)
+        return f'{val:,.0f} bytes/sec ({mbs} MB/s)'
+    else:
+        return f'{val:,.0f}'
 
 data = json.load(sys.stdin)
+
+print()
+print(f\"{'Metric':<30} {'Peak':>35} {'P95':>35} {'Average':>35}\")
+print(f\"{'------':<30} {'----':>35} {'---':>35} {'-------':>35}\")
+
 for metric in data.get('value', []):
     name = metric['name']['localizedValue']
     unit = metric.get('unit', '')
-    # Get max of all maximum values across all timeseries
-    max_val = None
+
+    max_vals = []
+    avg_vals = []
     for ts in metric.get('timeseries', []):
         for point in ts.get('data', []):
             v = point.get('maximum')
-            if v is not None and (max_val is None or v > max_val):
-                max_val = v
+            if v is not None:
+                max_vals.append(v)
+            v = point.get('average')
+            if v is not None:
+                avg_vals.append(v)
 
-    if max_val is not None:
-        if name == 'Used Memory RSS':
-            gb = round(max_val / (1024**3), 2)
-            print(f'{name:<30} {max_val:>15,.0f} bytes ({gb} GB)')
-        elif unit == 'Percent':
-            print(f'{name:<30} {max_val:>15.1f} %')
-        elif unit == 'BytesPerSecond':
-            mbs = round(max_val / (1024**2), 2)
-            print(f'{name:<30} {max_val:>15,.0f} bytes/sec ({mbs} MB/s)')
-        else:
-            print(f'{name:<30} {max_val:>15,.0f}')
-    else:
-        print(f'{name:<30} No data')
+    peak = max(max_vals) if max_vals else None
+    p95 = percentile95(max_vals)
+    avg = sum(avg_vals) / len(avg_vals) if avg_vals else None
+
+    peak_s = format_value(name, unit, peak)
+    p95_s = format_value(name, unit, p95)
+    avg_s = format_value(name, unit, avg)
+
+    print(f'{name:<30} {peak_s:>35} {p95_s:>35} {avg_s:>35}')
 "
 
 echo ""
 echo "Use these values to select an appropriate AMR SKU:"
-echo "  - Memory: Choose SKU with usable memory >= max used memory"
+echo "  - Memory: Choose SKU with usable memory >= peak used memory"
 echo "  - Server Load: High Server Load (>70%) with low memory suggests Compute Optimized (X-series)"
 echo "  - Connections: Check max connections supported by target SKU"
 echo ""

@@ -149,7 +149,7 @@ Both values are in MB. **Actual Usable = SKU Capacity − (maxmemoryReserved + m
 
 > **Fallback**: If the scripts fail (e.g., locked tenant, insufficient permissions, no CLI access), direct the user to retrieve the same metrics manually from the **Azure Portal** under their cache's **Monitoring → Metrics** blade.
 
-**Metrics retrieved**:
+**Metrics retrieved** (Peak, P95, and Average for each):
 - Used Memory RSS (bytes and GB)
 - Server Load (%)
 - Connected Clients
@@ -159,6 +159,7 @@ Use these values to:
 1. Size the target AMR SKU (usable memory ≥ peak used memory — no extra buffer needed with an eviction policy)
 2. Choose tier (high Server Load + low memory → Compute Optimized X-series)
 3. Verify connection limits are sufficient
+4. Use P95 values to distinguish sustained load from occasional spikes
 
 ### Step 2: Select Target AMR SKU
 1. Refer to the [SKU Mapping Guide](references/sku-mapping.md)
