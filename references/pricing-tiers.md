@@ -88,7 +88,7 @@ HA (production):   Monthly = Hourly × 730 × 2
 |---------|-------------|------------|------------|---------------|
 | ACR Basic | C0-C6 | No | No | No |
 | ACR Standard | C0-C6 | Yes (always) | No | No |
-| ACR Premium | P1-P5 | Yes (always) | Yes (1-10 shards) | Yes |
+| ACR Premium | P1-P5 | Yes (always) | Yes (1-15 shards) | Yes |
 | AMR Memory | M10-M2000 | Optional | Yes (managed internally) | No |
 | AMR Balanced | B0-B1000 | Optional | Yes (managed internally) | No |
 | AMR Compute | X3-X700 | Optional | Yes (managed internally) | No |
