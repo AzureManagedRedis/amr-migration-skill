@@ -66,11 +66,11 @@ When migrating, compare **usable memory to usable memory**:
 
 ## Mapping Guiding Principles
 
-1. **Use ACR metrics to determine workload dimensions**: Assess dataset size, throughput (ops/s), bandwidth, and connected clients using the metrics scripts. Choose the cheapest AMR SKU that covers all dimensions.
+1. **Use ACR metrics to determine workload dimensions**: Assess dataset size, Server Load, bandwidth, and connected clients using the metrics scripts. Choose the cheapest AMR SKU that covers all dimensions.
 2. Memory Optimized (M-series) offers the most capacity per dollar, but starts from M10. If the workload is compute-heavy, a higher tier (B or X-series) may be needed despite lower memory requirements.
 3. For ACR clustered caches, the right AMR tier depends on *why* it was clustered:
    - **Clustered for capacity** (large dataset, low load) → **M-series** is most cost-effective
-   - **Clustered for processing power** (small dataset, high ops/s) → **X-series** is best
+   - **Clustered for processing power** (small dataset, high Server Load) → **X-series** is best
    - **Truly balanced workload** (moderate data + moderate compute) → **B-series**
 4. For compute intensive tasks Compute Optimized (X-Series) offer more compute power for the same amount of memory, but at a higher cost.
 5. **Always calculate usable memory (advertised × 0.8) when comparing SKUs**
@@ -215,17 +215,17 @@ When selecting an AMR SKU, consider:
    - Current **actual used memory** (not SKU size) — run `scripts/get_acr_metrics.ps1` (or `.sh`) to pull these automatically
    - Both ACR and AMR reserve ~20% for system overhead
 
-2. **Throughput Requirements**
-   - Current operations/second
+2. **Compute Requirements**
+   - Current Server Load (%) — the primary indicator of compute pressure
    - Peak vs average load
    - Read/write ratio
 
 3. **Cost Considerations**
    - M-series offers the most memory capacity per dollar — best when dataset size is the primary constraint
-   - X-series is most cost-effective when throughput/ops-per-second is the bottleneck on a smaller dataset
+   - X-series is most cost-effective when Server Load is high on a smaller dataset
    - B-series suits genuinely balanced workloads (moderate data + moderate compute)
    - Non-HA options available for dev/test (50% savings)
-   - **Always check ACR metrics** (memory, ops/s, bandwidth, connections) via `scripts/get_acr_metrics.ps1` (or `.sh`) to identify the actual bottleneck before choosing a tier
+   - **Always check ACR metrics** (memory, Server Load, bandwidth, connections) via `scripts/get_acr_metrics.ps1` (or `.sh`) to identify the actual bottleneck before choosing a tier
 
 ---
 
@@ -244,10 +244,10 @@ When selecting an AMR SKU, consider:
 
 Choose Compute Optimized when your existing cache has:
 
-1. **Low memory utilization but high operations/second**
+1. **Low memory utilization but high Server Load**
    - Your cache is using < 50% of available memory
-   - But you're hitting CPU limits or experiencing latency issues
-   - Example: C3 Standard (6 GB) using only 2 GB memory but running 50K+ ops/sec
+   - But Server Load is consistently high (>70%), indicating compute pressure
+   - Example: C3 Standard (6 GB) using only 2 GB memory but Server Load at 80%+
 
 2. **High connection counts**
    - Compute Optimized SKUs support more max connections at each size
@@ -285,29 +285,26 @@ Before migrating, pull these metrics using `scripts/get_acr_metrics.ps1` (or `.s
 1. **Memory Usage**: Monitor → Used Memory / Max Memory
    - If consistently < 50%, consider smaller SKU or Compute Optimized
    
-2. **Operations per Second**: Monitor → Operations Per Second
-   - High ops (>50K/sec) with low memory = Compute Optimized candidate
+2. **Server Load**: Monitor → Server Load
+   - High Server Load (>70%) with low memory utilization = Compute Optimized candidate
    
-3. **Server Load**: Monitor → Server Load
-   - High Server Load (>70%) with available memory = Compute Optimized candidate
-   
-4. **Connected Clients**: Monitor → Connected Clients
+3. **Connected Clients**: Monitor → Connected Clients
    - Approaching max connections = move to higher tier or Compute Optimized
 
 ### Example Migration Scenarios
 
 **Scenario 1: Session Store with High Concurrency**
-- Current: Premium P2 (13 GB), using 4 GB memory, 80K ops/sec, 25K connections
+- Current: Premium P2 (13 GB), using 4 GB memory, Server Load at 75%, 25K connections
 - Recommendation: **X10 (12 GB)** - provides 75K connections and high throughput
 
 **Scenario 2: Application Cache with Large Dataset**
-- Current: Premium P3 (26 GB), using 22 GB memory, 20K ops/sec
+- Current: Premium P3 (26 GB), using 22 GB memory, Server Load at 30%
 - Recommendation: **M20 or B20 (24 GB)** - memory-focused, adequate throughput
 
 **Scenario 3: Real-time Analytics Dashboard**
-- Current: Premium P1 (6 GB), using 2 GB memory, 100K ops/sec, Server Load at 85%
+- Current: Premium P1 (6 GB), using 2 GB memory, Server Load at 85%
 - Recommendation: **X5 (6 GB)** - maximum throughput for compute-intensive workload
 
 **Scenario 4: General Web App Cache**
-- Current: Standard C3 (6 GB), using 4 GB memory, 15K ops/sec
+- Current: Standard C3 (6 GB), using 4 GB memory, Server Load at 40%
 - Recommendation: **B5 (6 GB)** - balanced option, room to grow

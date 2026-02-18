@@ -182,7 +182,7 @@ Fetch documentation from the MCP server for the latest comparison, but key diffe
 ### How do I choose the right AMR SKU?
 Refer to [SKU Mapping Guide](references/sku-mapping.md) and consider:
 - Current memory usage and growth projections
-- Required throughput (operations/second)
+- Compute pressure (Server Load %)
 - Feature requirements (clustering, geo-replication, Redis modules)
 - Budget constraints
 

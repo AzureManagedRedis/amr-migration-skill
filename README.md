@@ -33,7 +33,7 @@ Try these prompts to get started:
 - **"I need to migrate my Azure Cache for Redis to AMR"** — starts a guided migration workflow
 - **"What AMR SKU should I use for my P2 cache with 3 shards?"** — gets a SKU recommendation
 - **"Compare pricing between my current P2 and AMR M20 in westus2"** — runs the pricing scripts
-- **"Pull metrics for my cache `my-redis` in resource group `my-rg`"** — fetches Server Load, memory, ops/sec
+- **"Pull metrics for my cache `my-redis` in resource group `my-rg`"** — fetches Server Load, memory, connections
 - **"What are the connection string differences between ACR and AMR?"** — highlights port/DNS changes
 - **"When is Azure Cache for Redis being retired?"** — retirement dates and timeline
 
