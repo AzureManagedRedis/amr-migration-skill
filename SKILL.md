@@ -171,8 +171,9 @@ Use these values to:
 
 ### Step 3: Plan Migration
 1. Determine migration strategy (dual-write, snapshot/restore, etc.)
-2. Plan for potential downtime or data sync requirements
-3. Update application connection strings and configuration
+2. **Clustering policy**: For non-clustered ACR caches (Basic, Standard, non-clustered Premium), create the AMR cache with **Enterprise clustering policy** to avoid client application changes. OSS clustering policy exposes cluster topology and may require a cluster-aware client.
+3. Plan for potential downtime or data sync requirements
+4. Update application connection strings and configuration
 
 ### Step 4: Execute Migration
 1. Create the target AMR cache

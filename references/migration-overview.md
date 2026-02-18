@@ -74,9 +74,11 @@ This guide covers migrating from Azure Cache for Redis to Azure Managed Redis (A
 - \* Cost-efficient option - ensure peak memory usage ≤ suggested AMR usable memory
 - \*\* Larger memory option if future dataset growth is expected
 
+> **Important — Clustering Policy**: Non-clustered ACR caches (Basic, Standard, and non-clustered Premium) should be migrated to AMR with **Enterprise clustering policy** enabled. AMR uses clustering internally for all SKUs, and the default OSS clustering policy exposes cluster topology to the client, which may require application code changes (e.g., switching to a cluster-aware Redis client). Enterprise clustering policy hides this from the application, preserving the single-endpoint behavior these caches had on ACR.
+
 ### Premium Clustered Caches
-- **Sharded clusters**: Choose Memory Optimized tier with equivalent total memory
-- **Multiple read replicas**: Choose Compute Optimized tier with equivalent primary replica memory
+- Refer to the [SKU Mapping Guide — Premium Clustered tables](sku-mapping.md#premium-clustered--amr-mapping) for detailed shard-count-to-SKU mappings
+- The right AMR tier depends on *why* the cache was clustered — see [Mapping Guiding Principles](sku-mapping.md#mapping-guiding-principles)
 
 ## Migration Strategies
 
