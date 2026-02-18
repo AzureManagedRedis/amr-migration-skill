@@ -8,7 +8,7 @@
 #   - Used Memory RSS (bytes)
 #   - Server Load (%)
 #   - Connected Clients
-#   - Operations per Second
+#   - Network Bandwidth Usage (bytes/sec)
 #
 # Examples:
 #   ./get_acr_metrics.sh abc123-def456 my-rg my-redis-cache
@@ -34,7 +34,7 @@ usage() {
     echo "  - Used Memory Percentage"
     echo "  - Server Load (%)"
     echo "  - Connected Clients"
-    echo "  - Operations per Second"
+    echo "  - Network Bandwidth (bytes/sec)"
     exit 1
 }
 
@@ -70,7 +70,7 @@ echo ""
 
 # Build the metrics API URL
 RESOURCE_URI="/subscriptions/${SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Cache/Redis/${CACHE_NAME}"
-METRICS="usedmemoryRss,serverLoad,connectedclients,operationsPerSecond"
+METRICS="usedmemoryRss,serverLoad,connectedclients,cacheRead,cacheWrite"
 TIMESPAN="P${DAYS}D"
 INTERVAL="PT1H"  # 1 hour intervals to reduce response size
 API_VERSION="2023-10-01"
@@ -116,8 +116,9 @@ for metric in data.get('value', []):
             print(f'{name:<30} {max_val:>15,.0f} bytes ({gb} GB)')
         elif unit == 'Percent':
             print(f'{name:<30} {max_val:>15.1f} %')
-        elif unit == 'CountPerSecond':
-            print(f'{name:<30} {max_val:>15,.0f} ops/sec')
+        elif unit == 'BytesPerSecond':
+            mbs = round(max_val / (1024**2), 2)
+            print(f'{name:<30} {max_val:>15,.0f} bytes/sec ({mbs} MB/s)')
         else:
             print(f'{name:<30} {max_val:>15,.0f}')
     else:
@@ -126,7 +127,7 @@ for metric in data.get('value', []):
 
 echo ""
 echo "Use these values to select an appropriate AMR SKU:"
-echo "  - Memory: Choose SKU with usable memory > max used memory + 20% buffer"
+echo "  - Memory: Choose SKU with usable memory >= max used memory"
 echo "  - Server Load: High Server Load (>70%) with low memory suggests Compute Optimized (X-series)"
 echo "  - Connections: Check max connections supported by target SKU"
 echo ""

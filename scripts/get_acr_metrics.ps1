@@ -7,7 +7,7 @@
 #   - Used Memory RSS (bytes)
 #   - Server Load (%)
 #   - Connected Clients
-#   - Operations per Second
+#   - Network Bandwidth Usage (bytes/sec)
 #
 # Examples:
 #   .\get_acr_metrics.ps1 -SubscriptionId abc123 -ResourceGroup my-rg -CacheName my-cache
@@ -53,7 +53,7 @@ Write-Host ""
 
 # Build the metrics API URL
 $resourceUri = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Cache/Redis/$CacheName"
-$metrics = "usedmemoryRss,serverLoad,connectedclients,operationsPerSecond"
+$metrics = "usedmemoryRss,serverLoad,connectedclients,cacheRead,cacheWrite"
 $timespan = "P${Days}D"
 $interval = "PT1H"  # 1 hour intervals to reduce response size
 $apiVersion = "2023-10-01"
@@ -101,8 +101,9 @@ foreach ($metric in $response.value) {
             { $unit -eq "Percent" } {
                 Write-Host ("{0,-30} {1,15:N1} %" -f $name, $maxValue)
             }
-            { $unit -eq "CountPerSecond" } {
-                Write-Host ("{0,-30} {1,15:N0} ops/sec" -f $name, $maxValue)
+            { $unit -eq "BytesPerSecond" } {
+                $maxMBs = [math]::Round($maxValue / 1MB, 2)
+                Write-Host ("{0,-30} {1,15:N0} bytes/sec ({2} MB/s)" -f $name, $maxValue, $maxMBs)
             }
             default {
                 Write-Host ("{0,-30} {1,15:N0}" -f $name, $maxValue)
@@ -115,7 +116,7 @@ foreach ($metric in $response.value) {
 
 Write-Host ""
 Write-Host "Use these values to select an appropriate AMR SKU:"
-Write-Host "  - Memory: Choose SKU with usable memory > max used memory + 20% buffer"
+Write-Host "  - Memory: Choose SKU with usable memory >= max used memory"
 Write-Host "  - Server Load: High Server Load (>70%) with low memory suggests Compute Optimized (X-series)"
 Write-Host "  - Connections: Check max connections supported by target SKU"
 Write-Host ""

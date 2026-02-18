@@ -153,7 +153,7 @@ Both values are in MB. **Actual Usable = SKU Capacity − (maxmemoryReserved + m
 - Used Memory RSS (bytes and GB)
 - Server Load (%)
 - Connected Clients
-- Operations per Second
+- Network Bandwidth — Cache Read and Cache Write (bytes/sec)
 
 Use these values to:
 1. Size the target AMR SKU (usable memory ≥ peak used memory — no extra buffer needed with an eviction policy)
