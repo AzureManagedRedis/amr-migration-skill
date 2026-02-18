@@ -60,10 +60,10 @@ Premium:  Monthly = Hourly × 730 × (1 + replicas) × shards
 
 | Tier | HA | Clustering | MRPP | Node Multiplier |
 |------|-----|------------|------|-----------------|
-| **Memory Optimized** (M*) | ✅/❌ Optional | ❌ No | ❌ No | × 1 or × 2 |
-| **Balanced** (B*) | ✅/❌ Optional | ❌ No | ❌ No | × 1 or × 2 |
-| **Compute Optimized** (X*) | ✅/❌ Optional | ❌ No | ❌ No | × 1 or × 2 |
-| **Flash Optimized** (A*) | ✅/❌ Optional | ❌ No | ❌ No | × 1 or × 2 |
+| **Memory Optimized** (M*) | ✅/❌ Optional | Yes (managed internally) | ❌ No | × 1 or × 2 |
+| **Balanced** (B*) | ✅/❌ Optional | Yes (managed internally) | ❌ No | × 1 or × 2 |
+| **Compute Optimized** (X*) | ✅/❌ Optional | Yes (managed internally) | ❌ No | × 1 or × 2 |
+| **Flash Optimized** (A*) | ✅/❌ Optional | Yes (managed internally) | ❌ No | × 1 or × 2 |
 
 #### AMR SKU Naming for API
 - Memory Optimized: `M10 Cache Instance`, `M20 Cache Instance`, etc.
@@ -78,21 +78,21 @@ Non-HA (dev/test): Monthly = Hourly × 730
 HA (production):   Monthly = Hourly × 730 × 2
 ```
 
-**Note**: AMR does not support clustering or MRPP - use larger SKUs instead.
+**Note**: AMR manages clustering internally — customers cannot configure shard count. AMR does not support MRPP; for additional resiliency, use active geo-replication instead.
 
 ---
 
 ## Quick Reference Table
 
-| Product | SKU Pattern | HA Default | Supports Clustering | Supports MRPP |
-|---------|-------------|------------|---------------------|---------------|
+| Product | SKU Pattern | HA Default | Clustering | Supports MRPP |
+|---------|-------------|------------|------------|---------------|
 | ACR Basic | C0-C6 | No | No | No |
 | ACR Standard | C0-C6 | Yes (always) | No | No |
 | ACR Premium | P1-P5 | Yes (always) | Yes (1-10 shards) | Yes |
-| AMR Memory | M10-M2000 | Optional | No | No |
-| AMR Balanced | B0-B1000 | Optional | No | No |
-| AMR Compute | X3-X700 | Optional | No | No |
-| AMR Flash | A250-A4500 | Optional | No | No |
+| AMR Memory | M10-M2000 | Optional | Yes (managed internally) | No |
+| AMR Balanced | B0-B1000 | Optional | Yes (managed internally) | No |
+| AMR Compute | X3-X700 | Optional | Yes (managed internally) | No |
+| AMR Flash | A250-A4500 | Optional | Yes (managed internally) | No |
 
 ---
 
