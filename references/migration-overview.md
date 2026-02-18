@@ -96,7 +96,7 @@ Tools:
 
 ## AMR Performance Tiers
 
-For AMR tier definitions and selection guidance, see [Feature Comparison — AMR Tiers](feature-comparison.md#amr-tiers) and [SKU Mapping — Selection Criteria](sku-mapping.md#selection-criteria).
+For AMR tier definitions and selection guidance, see [Feature Comparison — AMR Tiers](feature-comparison.md#amr-tiers) and [SKU Mapping — Choosing the Right AMR SKU](sku-mapping.md#choosing-the-right-amr-sku).
 
 ---
 

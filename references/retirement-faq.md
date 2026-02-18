@@ -61,10 +61,10 @@ All instances of Azure Cache for Redis Enterprise and Enterprise Flash tiers wil
 ## Migration Guidance
 
 ### How to choose the right AMR tier?
-See the [Migration Overview](https://learn.microsoft.com/azure/redis/migrate/migrate-overview) for tier and SKU selection guidance.
+See the [SKU Mapping Guide](sku-mapping.md) for detailed mapping tables and selection criteria, or the [official Migration Overview](https://learn.microsoft.com/azure/redis/migrate/migrate-overview).
 
 ### How to retain data during migration?
-Follow the [migration documentation](https://learn.microsoft.com/azure/redis/migrate/migrate-overview) for instructions on migrating cache endpoints and preserving data.
+See [Migration Overview](migration-overview.md) for strategies (dual-write, RDB export/import, RIOT), or the [official migration documentation](https://learn.microsoft.com/azure/redis/migrate/migrate-overview).
 
 ### Feature support
 AMR supports all Redis functionality from existing Azure Cache for Redis SKUs. Some management operations, regions, and SKU sizes may not yet be available - contact support if blocked.

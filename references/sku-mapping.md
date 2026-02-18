@@ -206,30 +206,26 @@ For complete AMR SKU definitions (M, B, X, Flash series) with memory, vCPUs, and
 
 ---
 
-## Selection Criteria
+## Choosing the Right AMR SKU
 
-When selecting an AMR SKU, consider:
+When selecting an AMR SKU, consider the following dimensions:
 
-1. **Memory Requirements**
-   - Current **actual used memory** (not SKU size) — run `scripts/get_acr_metrics.ps1` (or `.sh`) to pull these automatically
-   - Both ACR and AMR reserve ~20% for system overhead
-   - AMR can run at full memory utilization with an eviction policy set — no extra margin needed
+### Memory Requirements
+- Current **actual used memory** (not SKU size) — run `scripts/get_acr_metrics.ps1` (or `.sh`) to pull these automatically
+- Both ACR and AMR reserve ~20% for system overhead
+- AMR can run at full memory utilization with an eviction policy set — no extra margin needed
 
-2. **Compute Requirements**
-   - Current Server Load (%) — the primary indicator of compute pressure
-   - Peak vs average load
-   - Read/write ratio
+### Compute Requirements
+- Current Server Load (%) — the primary indicator of compute pressure
+- Peak vs average load
+- Read/write ratio
 
-3. **Cost Considerations**
-   - M-series offers the most memory capacity per dollar — best when dataset size is the primary constraint
-   - X-series is most cost-effective when Server Load is high on a smaller dataset
-   - B-series suits genuinely balanced workloads (moderate data + moderate compute)
-   - Non-HA options available for dev/test (50% savings)
-   - **Always check ACR metrics** (memory, Server Load, bandwidth, connections) via `scripts/get_acr_metrics.ps1` (or `.sh`) to identify the actual bottleneck before choosing a tier
-
----
-
-## Choosing the Right Performance Tier
+### Cost Considerations
+- M-series offers the most memory capacity per dollar — best when dataset size is the primary constraint
+- X-series is most cost-effective when Server Load is high on a smaller dataset
+- B-series suits genuinely balanced workloads (moderate data + moderate compute)
+- Non-HA options available for dev/test (50% savings)
+- **Always check ACR metrics** (memory, Server Load, bandwidth, connections) via `scripts/get_acr_metrics.ps1` (or `.sh`) to identify the actual bottleneck before choosing a tier
 
 ### Tier Comparison
 
@@ -307,4 +303,4 @@ Before migrating, pull these metrics using `scripts/get_acr_metrics.ps1` (or `.s
 
 **Scenario 4: General Web App Cache**
 - Current: Standard C3 (6 GB), using 4 GB memory, Server Load at 40%
-- Recommendation: **B5 (6 GB)** - balanced option, room to grow
+- Recommendation: **B5 (6 GB)** - balanced option for moderate workloads
