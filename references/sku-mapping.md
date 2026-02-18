@@ -85,22 +85,22 @@ For complete AMR SKU definitions (M, B, X, Flash series) with memory, vCPUs, and
 
 ## Basic/Standard Non-Clustered → AMR Mapping
 
-| Tier | SKU | ACR HA | ACR Usable | Target AMR | AMR Advertised (Usable) |
-|------|-----|--------|------------|------------|-------------------------|
-| **Basic** | C0 | No | 0.2 GB | B0 | 0.5 GB (0.4 GB) |
-| | C1 | No | 0.8 GB | B1 | 1 GB (0.8 GB) |
-| | C2 | No | 2 GB | B3 | 3 GB (2.4 GB) |
-| | C3 | No | 4.8 GB | B5 | 6 GB (4.8 GB) |
-| | C4 | No | 10.4 GB | M10 or M20 | 12 GB (9.6 GB) or 24 GB (19.2 GB) |
-| | C5 | No | 20.8 GB | M20 or M50 | 24 GB (19.2 GB) or 60 GB (48 GB) |
-| | C6 | No | 42.4 GB | M50 | 60 GB (48 GB) |
-| **Standard** | C0 | Yes | 0.2 GB | B0 | 0.5 GB (0.4 GB) |
-| | C1 | Yes | 0.8 GB | B1 | 1 GB (0.8 GB) |
-| | C2 | Yes | 2 GB | B3 | 3 GB (2.4 GB) |
-| | C3 | Yes | 4.8 GB | B5 | 6 GB (4.8 GB) |
-| | C4 | Yes | 10.4 GB | M10 or M20 | 12 GB (9.6 GB) or 24 GB (19.2 GB) |
-| | C5 | Yes | 20.8 GB | M20 or M50 | 24 GB (19.2 GB) or 60 GB (48 GB) |
-| | C6 | Yes | 42.4 GB | M50 | 60 GB (48 GB) |
+| Tier | SKU | ACR HA | ACR Usable | Target AMR | AMR HA | AMR Advertised (Usable) |
+|------|-----|--------|------------|------------|--------|-------------------------|
+| **Basic** | C0 | No | 0.2 GB | B0 | No | 0.5 GB (0.4 GB) |
+| | C1 | No | 0.8 GB | B1 | No | 1 GB (0.8 GB) |
+| | C2 | No | 2 GB | B3 | No | 3 GB (2.4 GB) |
+| | C3 | No | 4.8 GB | B5 | No | 6 GB (4.8 GB) |
+| | C4 | No | 10.4 GB | M10 or M20 | No | 12 GB (9.6 GB) or 24 GB (19.2 GB) |
+| | C5 | No | 20.8 GB | M20 or M50 | No | 24 GB (19.2 GB) or 60 GB (48 GB) |
+| | C6 | No | 42.4 GB | M50 | No | 60 GB (48 GB) |
+| **Standard** | C0 | Yes | 0.2 GB | B0 | Yes | 0.5 GB (0.4 GB) |
+| | C1 | Yes | 0.8 GB | B1 | Yes | 1 GB (0.8 GB) |
+| | C2 | Yes | 2 GB | B3 | Yes | 3 GB (2.4 GB) |
+| | C3 | Yes | 4.8 GB | B5 | Yes | 6 GB (4.8 GB) |
+| | C4 | Yes | 10.4 GB | M10 or M20 | Yes | 12 GB (9.6 GB) or 24 GB (19.2 GB) |
+| | C5 | Yes | 20.8 GB | M20 or M50 | Yes | 24 GB (19.2 GB) or 60 GB (48 GB) |
+| | C6 | Yes | 42.4 GB | M50 | Yes | 60 GB (48 GB) |
 
 **Note**: Use the smallest SKU whose usable memory covers your peak usage — AMR can safely run at full memory utilization with an eviction policy set. Basic (No HA) migrations may use AMR non-HA (`-NoHA`) for dev/test to reduce cost; Standard (HA) migrations should use AMR with HA (the default).
 
@@ -108,17 +108,19 @@ For complete AMR SKU definitions (M, B, X, Flash series) with memory, vCPUs, and
 
 ## Premium Non-Clustered → AMR Mapping
 
-| SKU | ACR HA | ACR Usable | Target AMR | AMR Advertised (Usable) |
-|-----|--------|------------|------------|-------------------------|
-| P1 | Yes | 4.8 GB | B5 | 6 GB (4.8 GB) |
-| P2 | Yes | 10.4 GB | B10 or B20 | 12 GB (9.6 GB) or 24 GB (19.2 GB) |
-| P3 | Yes | 20.8 GB | B20 or B50 | 24 GB (19.2 GB) or 60 GB (48 GB) |
-| P4 | Yes | 42.4 GB | B50 | 60 GB (48 GB) |
-| P5 | Yes | 96 GB | B100 | 120 GB (96 GB) |
+| SKU | ACR HA | ACR Usable | Target AMR | AMR HA | AMR Advertised (Usable) |
+|-----|--------|------------|------------|--------|-------------------------|
+| P1 | Yes | 4.8 GB | B5 | Yes | 6 GB (4.8 GB) |
+| P2 | Yes | 10.4 GB | B10 or B20 | Yes | 12 GB (9.6 GB) or 24 GB (19.2 GB) |
+| P3 | Yes | 20.8 GB | B20 or B50 | Yes | 24 GB (19.2 GB) or 60 GB (48 GB) |
+| P4 | Yes | 42.4 GB | B50 | Yes | 60 GB (48 GB) |
+| P5 | Yes | 96 GB | B100 | Yes | 120 GB (96 GB) |
 
 ---
 
 ## Premium Clustered → AMR Mapping
+
+> **Note**: ACR Premium is always HA, so all clustered mappings below target AMR with HA enabled (the default).
 
 ### P1 Clustered (6 GB per shard)
 
