@@ -88,7 +88,7 @@ This document provides a comparison of features between Azure Cache for Redis an
 ### AMR Tiers
 - **Memory Optimized**: High memory-to-compute ratio workloads
 - **Balanced**: General-purpose workloads
-- **Compute Optimized**: High-throughput, low-latency workloads
+- **Compute Optimized**: High throughput, large number of clients, or compute-intensive
 - **Flash Optimized**: Large datasets with tiered storage
 
 ## Migration Considerations

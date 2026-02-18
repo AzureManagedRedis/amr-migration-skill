@@ -132,17 +132,7 @@ Tools:
 
 ## AMR Performance Tiers
 
-| Tier | Best For |
-|------|----------|
-| **Memory Optimized** | Large datasets, memory-intensive workloads |
-| **Balanced** | General-purpose, uncertain requirements |
-| **Compute Optimized** | High throughput, low latency requirements |
-| **Flash Optimized** | Very large datasets (migrating from Enterprise Flash) |
-
-### Choosing the Right Tier
-- **Memory-intensive** (runs out of memory before CPU): Memory Optimized
-- **Compute-intensive** (throughput/latency issues): Compute Optimized
-- **Unsure**: Start with Balanced
+For AMR tier definitions and selection guidance, see [Feature Comparison — AMR Tiers](feature-comparison.md#amr-tiers) and [SKU Mapping — Selection Criteria](sku-mapping.md#selection-criteria).
 
 ---
 
