@@ -72,7 +72,7 @@ This document provides a comparison of features between Azure Cache for Redis an
 | Feature | ACR Tiers | AMR |
 |---------|----------|-----|
 | TLS Encryption | ✅ | ✅ |
-| VNet Integration | ✅ (Premium) | ✅ |
+| VNet Integration | ✅ (Premium) | ❌ (use Private Link) |
 | Private Endpoint | ✅ | ✅ |
 | Microsoft Entra Authentication | ✅ | ✅ |
 | Access Key Authentication | ✅ | ✅ |
@@ -83,7 +83,8 @@ This document provides a comparison of features between Azure Cache for Redis an
 ### ACR Tiers (Basic/Standard/Premium)
 - **Basic**: Single node, no SLA, development/test
 - **Standard**: Two-node replicated, 99.9% SLA
-- **Premium**: Clustering, VNet, persistence, geo-replication
+- **Premium**: Clustering, VNet injection, persistence, geo-replication
+  - **Note**: AMR does not support VNet injection — use Private Link for network isolation instead
 
 ### AMR Tiers
 - **Memory Optimized**: High memory-to-compute ratio workloads
