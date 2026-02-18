@@ -14,21 +14,13 @@ This guide covers migrating from Azure Cache for Redis to Azure Managed Redis (A
 
 ### Feature Comparison: ACR Tiers vs AMR
 
-| Feature | Basic | Standard | Premium | AMR (All Tiers) |
-|---------|-------|----------|---------|-----------------|
-| SLA | N/A | 99.9% | 99.9% | Up to 99.999% |
-| Data encryption in transit | Yes | Yes | Yes | Yes |
-| Network isolation | Yes | Yes | Yes | Yes |
-| Scaling up/out | Yes | Yes | Yes | Yes |
-| Scaling down/in | Yes | Yes | Yes | No |
-| OSS clustering | No | No | Yes | Yes |
-| Data persistence | No | No | Yes | Yes |
-| Zone redundancy | No | Preview | Yes | Yes (with HA) |
-| Geo-replication | No | No | Passive | **Active** |
-| Redis Modules | No | No | No | **Yes** |
-| Import/Export | No | No | Yes | Yes |
-| Microsoft Entra ID | Yes | Yes | Yes | Yes |
-| Non-HA option | N/A | No | No | Yes |
+For a detailed feature comparison (modules, clustering, HA, security), see [Feature Comparison](feature-comparison.md).
+
+Key migration highlights:
+- AMR supports **active geo-replication** (ACR Premium only had passive)
+- AMR includes **Redis Stack modules** (JSON, Search, TimeSeries, Bloom)
+- AMR offers **non-HA options** for dev/test (not available in ACR Standard/Premium)
+- AMR does **not** support scaling down/in or VNet injection
 
 ### Connection Changes
 
@@ -44,43 +36,11 @@ This guide covers migrating from Azure Cache for Redis to Azure Managed Redis (A
 
 ## SKU Mapping: ACR to AMR
 
-### Basic/Standard Tier Mappings
-
-| Azure Cache for Redis | Azure Managed Redis | Memory Change |
-|----------------------|---------------------|---------------|
-| Basic/Standard C0 | Balanced B0 | +50% |
-| Basic/Standard C1 | Balanced B1 | 0% |
-| Basic/Standard C2 | Balanced B3 | +17% |
-| Basic/Standard C3 | Balanced B5 | 0% |
-| Basic/Standard C4 | Memory Optimized M10* | -8% |
-| Basic/Standard C4 | Memory Optimized M20** | +46% |
-| Basic/Standard C5 | Memory Optimized M20* | -8% |
-| Basic/Standard C5 | Memory Optimized M50** | +57% |
-| Basic/Standard C6 | Memory Optimized M50 | +12% |
-
-### Premium Tier Mappings
-
-| Azure Cache for Redis | Azure Managed Redis | Memory Change |
-|----------------------|---------------------|---------------|
-| Premium P1 | Balanced B5 | 0% |
-| Premium P2 | Balanced B10* | -8% |
-| Premium P2 | Balanced B20** | +46% |
-| Premium P3 | Balanced B20* | -8% |
-| Premium P3 | Balanced B50** | +57% |
-| Premium P4 | Balanced B50 | +12% |
-| Premium P5 | Balanced B100 | 0% |
-
-**Notes:**
-- \* Cost-efficient option - ensure peak memory usage ≤ suggested AMR usable memory
-- \*\* Larger memory option if future dataset growth is expected
+For detailed SKU mapping tables (Basic/Standard, Premium non-clustered, and Premium clustered with per-shard-count mappings), see the [SKU Mapping Guide](sku-mapping.md).
 
 > **Important — Clustering Policy**: Non-clustered ACR caches (Basic, Standard, and non-clustered Premium) should be migrated to AMR with **Enterprise clustering policy** enabled. AMR uses clustering internally for all SKUs, and the default OSS clustering policy exposes cluster topology to the client, which may require application code changes (e.g., switching to a cluster-aware Redis client). Enterprise clustering policy hides this from the application, preserving the single-endpoint behavior these caches had on ACR.
 
 > **Important — Network Isolation**: AMR does not support VNet injection. ACR Premium caches using VNet injection should be migrated to AMR with **Private Link** (Private Endpoints) for network isolation.
-
-### Premium Clustered Caches
-- Refer to the [SKU Mapping Guide — Premium Clustered tables](sku-mapping.md#premium-clustered--amr-mapping) for detailed shard-count-to-SKU mappings
-- The right AMR tier depends on *why* the cache was clustered — see [Mapping Guiding Principles](sku-mapping.md#mapping-guiding-principles)
 
 ## Migration Strategies
 

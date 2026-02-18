@@ -10,30 +10,14 @@ This guide helps you select the appropriate Azure Managed Redis (AMR) SKU when m
 
 ## 💰 Dynamic Pricing
 
-Use the pricing scripts to get real-time pricing with monthly cost calculations:
+Use the pricing scripts to get real-time pricing with monthly cost calculations. See [Pricing Tier Rules](pricing-tiers.md) for detailed calculation logic and examples.
 
 ```powershell
-# Windows PowerShell - AMR pricing (HA by default)
-.\scripts\get_redis_price.ps1 -SKU M10 -Region westus2
-.\scripts\get_redis_price.ps1 -SKU M10 -Region westus2 -NoHA
-
-# Windows PowerShell - ACR pricing (specify tier for C* SKUs)
-.\scripts\get_redis_price.ps1 -SKU C3 -Region westus2 -Tier Standard
-.\scripts\get_redis_price.ps1 -SKU P2 -Region westus2
-.\scripts\get_redis_price.ps1 -SKU P2 -Region westus2 -Shards 3 -Replicas 2
-
-# Linux/Mac
-./scripts/get_redis_price.sh M10 westus2
-./scripts/get_redis_price.sh P2 westus2 --shards 3
+# Quick examples
+.\scripts\get_redis_price.ps1 -SKU M10 -Region westus2          # AMR with HA
+.\scripts\get_redis_price.ps1 -SKU M10 -Region westus2 -NoHA    # AMR without HA
+.\scripts\get_redis_price.ps1 -SKU P2 -Region westus2 -Shards 3 # ACR Premium clustered
 ```
-
-The scripts automatically calculate monthly costs based on:
-- **AMR**: HA (×2 nodes) or non-HA (×1 node)
-- **ACR Basic**: Single node (×1)
-- **ACR Standard**: (×2 nodes)
-- **ACR Premium**: shards × (replicas per shard + 1)
-
-See [pricing-tiers.md](pricing-tiers.md) for detailed calculation rules.
 
 > **Official Quotes**: Use [Azure Pricing Calculator](https://azure.microsoft.com/en-us/pricing/calculator/?service=managed-redis)
 
