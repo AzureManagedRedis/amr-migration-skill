@@ -71,8 +71,8 @@ This guide covers migrating from Azure Cache for Redis to Azure Managed Redis (A
 | Premium P5 | Balanced B100 | 0% |
 
 **Notes:**
-- \* Cost-efficient option - ensure peak memory usage < suggested AMR memory
-- \*\* Abundant memory option for growth
+- \* Cost-efficient option - ensure peak memory usage ≤ suggested AMR usable memory
+- \*\* Larger memory option if future dataset growth is expected
 
 ### Premium Clustered Caches
 - **Sharded clusters**: Choose Memory Optimized tier with equivalent total memory

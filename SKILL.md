@@ -147,7 +147,7 @@ Gather metrics from the existing ACR cache to inform SKU selection:
 - Operations per Second
 
 Use these values to:
-1. Size the target AMR SKU (memory > max used + 20% buffer)
+1. Size the target AMR SKU (usable memory ≥ peak used memory — no extra buffer needed with an eviction policy)
 2. Choose tier (high Server Load + low memory → Compute Optimized X-series)
 3. Verify connection limits are sufficient
 
@@ -181,7 +181,7 @@ Fetch documentation from the MCP server for the latest comparison, but key diffe
 
 ### How do I choose the right AMR SKU?
 Refer to [SKU Mapping Guide](references/sku-mapping.md) and consider:
-- Current memory usage and growth projections
+- Current memory usage
 - Compute pressure (Server Load %)
 - Feature requirements (clustering, geo-replication, Redis modules)
 - Budget constraints

@@ -55,12 +55,12 @@ See [pricing-tiers.md](pricing-tiers.md) for detailed calculation rules.
 ### Migration Sizing Rule
 When migrating, compare **usable memory to usable memory**:
 1. Check your current ACR cache's **actual used memory** (not SKU size) using `scripts/get_acr_metrics.ps1` (or `.sh`)
-2. Select an AMR SKU where **80% of the advertised size** exceeds your peak usage
+2. Select an AMR SKU whose **usable memory** (80% of advertised size) covers your peak usage
 
 **Example**: If your P2 cache (13 GB advertised, ~10.4 GB usable) is using 8 GB of data:
-- Need AMR with at least 8 GB usable + growth buffer
-- M10 (12 GB × 80% = 9.6 GB usable) - tight fit, no growth room
-- **M20 (24 GB × 80% = 19.2 GB usable) - recommended** ✓
+- Need AMR with at least 8 GB usable
+- **M10 (12 GB × 80% = 9.6 GB usable) - sufficient** ✓
+- With an eviction policy set, AMR can safely run at full memory utilization
 
 ---
 
@@ -102,7 +102,7 @@ For complete AMR SKU definitions (M, B, X, Flash series) with memory, vCPUs, and
 | | C5 | Yes | 20.8 GB | M20 or M50 | 24 GB (19.2 GB) or 60 GB (48 GB) |
 | | C6 | Yes | 42.4 GB | M50 | 60 GB (48 GB) |
 
-**Note**: Use the smaller SKU (M10, M20) for cost efficiency if your peak memory usage fits. Use larger SKU (M20, M50) for growth headroom. Basic (No HA) migrations may use AMR non-HA (`-NoHA`) for dev/test to reduce cost; Standard (HA) migrations should use AMR with HA (the default).
+**Note**: Use the smallest SKU whose usable memory covers your peak usage — AMR can safely run at full memory utilization with an eviction policy set. Basic (No HA) migrations may use AMR non-HA (`-NoHA`) for dev/test to reduce cost; Standard (HA) migrations should use AMR with HA (the default).
 
 ---
 
@@ -214,6 +214,7 @@ When selecting an AMR SKU, consider:
 1. **Memory Requirements**
    - Current **actual used memory** (not SKU size) — run `scripts/get_acr_metrics.ps1` (or `.sh`) to pull these automatically
    - Both ACR and AMR reserve ~20% for system overhead
+   - AMR can run at full memory utilization with an eviction policy set — no extra margin needed
 
 2. **Compute Requirements**
    - Current Server Load (%) — the primary indicator of compute pressure
