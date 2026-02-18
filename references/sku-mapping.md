@@ -54,7 +54,7 @@ See [pricing-tiers.md](pricing-tiers.md) for detailed calculation rules.
 
 ### Migration Sizing Rule
 When migrating, compare **usable memory to usable memory**:
-1. Check your current ACR cache's **actual used memory** (not SKU size) in Azure Portal
+1. Check your current ACR cache's **actual used memory** (not SKU size) using `scripts/get_acr_metrics.ps1` (or `.sh`)
 2. Select an AMR SKU where **80% of the advertised size** exceeds your peak usage
 
 **Example**: If your P2 cache (13 GB advertised, ~10.4 GB usable) is using 8 GB of data:
@@ -212,7 +212,7 @@ For complete AMR SKU definitions (M, B, X, Flash series) with memory, vCPUs, and
 When selecting an AMR SKU, consider:
 
 1. **Memory Requirements**
-   - Current **actual used memory** (not SKU size) from Azure Portal metrics
+   - Current **actual used memory** (not SKU size) — run `scripts/get_acr_metrics.ps1` (or `.sh`) to pull these automatically
    - Both ACR and AMR reserve ~20% for system overhead
 
 2. **Throughput Requirements**
@@ -225,7 +225,7 @@ When selecting an AMR SKU, consider:
    - X-series is most cost-effective when throughput/ops-per-second is the bottleneck on a smaller dataset
    - B-series suits genuinely balanced workloads (moderate data + moderate compute)
    - Non-HA options available for dev/test (50% savings)
-   - **Always check ACR metrics** (memory, ops/s, bandwidth, connections) to identify the actual bottleneck before choosing a tier
+   - **Always check ACR metrics** (memory, ops/s, bandwidth, connections) via `scripts/get_acr_metrics.ps1` (or `.sh`) to identify the actual bottleneck before choosing a tier
 
 ---
 
@@ -280,7 +280,7 @@ Choose Compute Optimized when your existing cache has:
 
 ### How to Assess Your Current Cache
 
-Before migrating, check these metrics in Azure Portal for your existing cache:
+Before migrating, pull these metrics using `scripts/get_acr_metrics.ps1` (or `.sh`) for your existing cache. If the scripts are unable to connect (locked tenant, permissions issues), check the **Azure Portal → Monitoring → Metrics** blade instead:
 
 1. **Memory Usage**: Monitor → Used Memory / Max Memory
    - If consistently < 50%, consider smaller SKU or Compute Optimized

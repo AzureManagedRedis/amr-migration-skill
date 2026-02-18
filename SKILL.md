@@ -138,6 +138,8 @@ Gather metrics from the existing ACR cache to inform SKU selection:
 
 **Requires**: Azure CLI logged in (`az login`)
 
+> **Fallback**: If the scripts fail (e.g., locked tenant, insufficient permissions, no CLI access), direct the user to retrieve the same metrics manually from the **Azure Portal** under their cache's **Monitoring → Metrics** blade.
+
 **Metrics retrieved**:
 - Used Memory RSS (bytes and GB)
 - Server Load (%)
