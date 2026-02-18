@@ -52,7 +52,7 @@ amr-migration-skill/
 │   ├── pricing-tiers.md         # Pricing calculation rules
 │   ├── retirement-faq.md        # ACR retirement dates and FAQ
 │   ├── sku-mapping.md           # SKU selection guidelines & decision matrix
-│   └── amr-sku-specs.md          # AMR SKU definitions (M, B, X, Flash series)
+│   └── amr-sku-specs.md         # AMR SKU definitions (M, B, X, Flash series)
 └── scripts/
     ├── get_acr_metrics.ps1      # Pull ACR metrics for SKU sizing
     ├── get_acr_metrics.sh

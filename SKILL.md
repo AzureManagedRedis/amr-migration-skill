@@ -185,7 +185,7 @@ Use these values to:
 ## Common Questions
 
 ### What is the difference between Azure Cache for Redis (ACR) and Azure Managed Redis (AMR)?
-Fetch documentation from the MCP server for the latest comparison, but key differences include:
+Refer to [Feature Comparison](references/feature-comparison.md) for the full matrix. Key differences include:
 - AMR offers Redis Stack features (JSON, Search, Time Series, Bloom filters)
 - AMR has different SKU tiers optimized for different workloads
 - AMR provides enhanced performance and scalability options
