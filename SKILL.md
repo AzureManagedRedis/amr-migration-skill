@@ -136,6 +136,15 @@ Gather metrics from the existing ACR cache to inform SKU selection:
 ./scripts/get_acr_metrics.sh <subscriptionId> <resourceGroup> <cacheName> 7
 ```
 
+Also retrieve the actual memory reservation to determine true usable capacity (defaults in the SKU mapping tables assume ~20%):
+
+```bash
+az redis show -n <cache-name> -g <resource-group> -o json \
+  --query "{maxfragmentationmemoryReserved: redisConfiguration.maxfragmentationmemoryReserved, maxmemoryReserved: redisConfiguration.maxmemoryReserved}"
+```
+
+Both values are in MB. **Actual Usable = SKU Capacity − (maxmemoryReserved + maxfragmentationmemoryReserved)**. Use this as the source of truth for sizing.
+
 **Requires**: Azure CLI logged in (`az login`)
 
 > **Fallback**: If the scripts fail (e.g., locked tenant, insufficient permissions, no CLI access), direct the user to retrieve the same metrics manually from the **Azure Portal** under their cache's **Monitoring → Metrics** blade.

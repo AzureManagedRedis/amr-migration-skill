@@ -41,7 +41,20 @@ See [pricing-tiers.md](pricing-tiers.md) for detailed calculation rules.
 
 ## ⚠️ Important: Memory Reservation
 
-**Both Azure Cache for Redis (ACR) and Azure Managed Redis (AMR) reserve ~20% of memory for system overhead by default.** However, customers can configure a custom memory reservation percentage. If a custom value is needed, it can be retrieved via the Azure CLI (e.g., `az redis show`) to determine the actual reservation policy in use.
+**Both Azure Cache for Redis (ACR) and Azure Managed Redis (AMR) reserve ~20% of memory for system overhead by default.** However, customers may have configured custom memory reservations. The "ACR Usable" values in the tables below assume default (~20%) reservations.
+
+**To get the actual usable memory for an ACR cache**, query the custom reservation settings whenever possible:
+
+```bash
+az redis show -n <cache-name> -g <resource-group> -o json \
+  --query "{maxfragmentationmemoryReserved: redisConfiguration.maxfragmentationmemoryReserved, maxmemoryReserved: redisConfiguration.maxmemoryReserved}"
+```
+
+Both values are returned in **MB**. Add them together and subtract from the nominal SKU capacity to get the actual usable memory:
+
+> **Actual Usable = SKU Capacity − (maxmemoryReserved + maxfragmentationmemoryReserved)**
+
+Use this as the source of truth for sizing instead of the default "ACR Usable" column values.
 
 | Metric | Description |
 |--------|-------------|
