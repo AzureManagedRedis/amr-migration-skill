@@ -30,8 +30,8 @@ Use the pricing scripts to get real-time pricing with monthly cost calculations:
 The scripts automatically calculate monthly costs based on:
 - **AMR**: HA (×2 nodes) or non-HA (×1 node)
 - **ACR Basic**: Single node (×1)
-- **ACR Standard**: Always HA (×2 nodes)
-- **ACR Premium**: Always HA shards × (replicas per shard + 1)
+- **ACR Standard**: (×2 nodes)
+- **ACR Premium**: shards × (replicas per shard + 1)
 
 See [pricing-tiers.md](pricing-tiers.md) for detailed calculation rules.
 
@@ -240,7 +240,7 @@ When selecting an AMR SKU, consider:
 |------|----------|
 | **Memory Optimized (M)** | Memory-intensive workloads, large datasets, lower throughput needs, dev/test |
 | **Balanced (B)** | Standard workloads, good balance of memory and compute |
-| **Compute Optimized (X)** | High-throughput, low-latency, performance-intensive workloads |
+| **Compute Optimized (X)** | High-throughput, performance-intensive workloads |
 | **Flash Optimized** | Very large datasets, cost-effective scaling with tiered storage |
 
 ### When to Choose Compute Optimized (X-Series)
