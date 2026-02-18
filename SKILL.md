@@ -116,10 +116,9 @@ See [Retirement FAQ](references/retirement-faq.md) for retirement dates, timelin
 
 ### Migration Overview
 See [Migration Overview](references/migration-overview.md) for detailed migration guidance including:
-- SKU mapping tables (ACR → AMR)
 - Migration strategies (new cache, RDB export/import, dual-write, RIOT)
-- Performance tier selection
 - Connection string changes
+- Clustering policy and network isolation considerations
 
 ## Migration Workflow
 

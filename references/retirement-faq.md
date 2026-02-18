@@ -31,9 +31,8 @@ All instances of Azure Cache for Redis (Basic, Standard, and Premium tiers) will
 
 ### Application changes required
 - Update Redis hostname and access key to new AMR instance
-- AMR instances are **clustered by default** - configure client library accordingly
-- Most client libraries (like StackExchange.Redis) work without special configuration
-- Non-clustered option available up to 25GB (clustering recommended for better performance)
+- For non-clustered ACR caches, use **Enterprise clustering policy** on AMR to preserve single-endpoint behavior and avoid client code changes
+- If using OSS clustering policy, ensure your client library supports cluster mode
 - Check for [cross-slot commands](https://redis.io/blog/redis-clustering-best-practices-with-keys/) compatibility
 
 ### Reservations
