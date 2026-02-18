@@ -62,8 +62,7 @@ This document provides a comparison of features between Azure Cache for Redis an
 | Feature | ACR Tiers | AMR |
 |---------|----------|-----|
 | Zone Redundancy | ✅ (Premium) | ✅ |
-| Active Geo-Replication | ❌ | ✅ |
-| Passive Geo-Replication | ✅ (Premium) | ✅ |
+| Geo-Replication | Passive (Premium) | Active (except B0, B1, Flash) |
 | Data Persistence (RDB) | ✅ (Premium) | ✅ |
 | Data Persistence (AOF) | ✅ (Premium) | ✅ |
 

@@ -4,7 +4,7 @@
 # Requires: Azure CLI logged in (az login)
 #
 # Retrieves Peak, P95 and Average values for last N days (default 30):
-#   - Used Memory RSS (bytes)
+#   - Used Memory RSS (bytes and GB)
 #   - Server Load (%)
 #   - Connected Clients
 #   - Network Bandwidth Usage (bytes/sec)

@@ -73,7 +73,7 @@ az redis show -g <resourceGroup> -n <cacheName> --query "{
 az redis server-link list -g <resourceGroup> -n <cacheName> -o table
 ```
 
-If links are returned, the cache uses geo-replication (passive or active depending on configuration).
+If links are returned, the cache uses passive geo-replication (active geo-replication is an AMR feature, not available on ACR Premium).
 
 ---
 

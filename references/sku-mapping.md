@@ -69,7 +69,7 @@ When migrating, compare **usable memory to usable memory**:
    - **Clustered for capacity** (large dataset, low load) → **M-series** is most cost-effective
    - **Clustered for processing power** (small dataset, high Server Load) → **X-series** is best
    - **Truly balanced workload** (moderate data + moderate compute) → **B-series**
-4. For compute intensive tasks Compute Optimized (X-Series) offer more compute power for the same amount of memory, but at a higher cost.
+4. For compute-intensive tasks, Compute Optimized (X-Series) offers more compute power for the same amount of memory, but at a higher cost.
 5. **Always calculate usable memory (advertised × 0.8) when comparing SKUs**
 
 ---
@@ -195,7 +195,7 @@ For complete AMR SKU definitions (M, B, X, Flash series) with memory, vCPUs, and
 | 1 | 96 GB | B100 | 120 GB (96 GB) |
 | 2 | 192 GB | B250 | 240 GB (192 GB) |
 | 3 | 288 GB | B350 | 360 GB (288 GB) |
-| 4 | 384 GB | B350 | 360 GB (288 GB) |
+| 4 | 384 GB | B500 | 480 GB (384 GB) |
 | 5 | 480 GB | B700 | 720 GB (576 GB) |
 | 6 | 576 GB | B700 | 720 GB (576 GB) |
 | 7 | 672 GB | B1000 | 960 GB (768 GB) |

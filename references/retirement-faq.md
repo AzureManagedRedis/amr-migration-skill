@@ -55,7 +55,7 @@ All instances of Azure Cache for Redis Enterprise and Enterprise Flash tiers wil
 - Microsoft Entra ID authentication built-in
 
 ### Reservations
-- Existing reservations supported until March 30, 2027
+- Existing reservations supported until March 31, 2027
 - Can cancel or exchange reservations before that date
 
 ## Migration Guidance
