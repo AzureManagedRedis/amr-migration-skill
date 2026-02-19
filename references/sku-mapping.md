@@ -290,17 +290,17 @@ Before migrating, pull these metrics using `scripts/get_acr_metrics.ps1` (or `.s
 ### Example Migration Scenarios
 
 **Scenario 1: Session Store with High Concurrency**
-- Current: Premium P2 (13 GB), using 4 GB memory, Server Load at 75%, 25K connections
+- Current: Premium P2 (13 GB), using 4 GB memory, Server Load up to 75%, 25K connections
 - Recommendation: **X10 (12 GB)** - provides 75K connections and high throughput
 
 **Scenario 2: Application Cache with Large Dataset**
-- Current: Premium P3 (26 GB), using 22 GB memory, Server Load at 30%
+- Current: Premium P3 (26 GB), using 22 GB memory, Server Load up to 30%
 - Recommendation: **M20 or B20 (24 GB)** - memory-focused, adequate throughput
 
 **Scenario 3: Real-time Analytics Dashboard**
-- Current: Premium P1 (6 GB), using 2 GB memory, Server Load at 85%
+- Current: Premium P1 (6 GB), using 2 GB memory, Server Load up to 85%
 - Recommendation: **X5 (6 GB)** - maximum throughput for compute-intensive workload
 
 **Scenario 4: General Web App Cache**
-- Current: Standard C3 (6 GB), using 4 GB memory, Server Load at 40%
+- Current: Standard C3 (6 GB), using 4 GB memory, Server Load up to 40%
 - Recommendation: **B5 (6 GB)** - balanced option for moderate workloads

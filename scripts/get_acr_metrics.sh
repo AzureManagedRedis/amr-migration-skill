@@ -4,7 +4,7 @@
 #
 # Requires: Azure CLI logged in (az login), python3, curl
 #
-# Retrieves Peak, P95 and Average values for last N days (default 30):
+# Retrieves Peak, P95 and Average values for last N days (default 7):
 #   - Used Memory RSS (bytes and GB)
 #   - Server Load (%)
 #   - Connected Clients
@@ -23,7 +23,7 @@ usage() {
     echo "  subscriptionId  - Azure subscription ID"
     echo "  resourceGroup   - Resource group containing the cache"
     echo "  cacheName       - Name of the Azure Cache for Redis instance"
-    echo "  days            - Number of days to look back (default: 30)"
+    echo "  days            - Number of days to look back (default: 7)"
     echo ""
     echo "Examples:"
     echo "  ./get_acr_metrics.sh abc123-def456 my-rg my-redis-cache"
@@ -40,7 +40,7 @@ usage() {
 SUBSCRIPTION="$1"
 RESOURCE_GROUP="$2"
 CACHE_NAME="$3"
-DAYS="${4:-30}"
+DAYS="${4:-7}"
 
 if [ -z "$SUBSCRIPTION" ] || [ -z "$RESOURCE_GROUP" ] || [ -z "$CACHE_NAME" ]; then
     usage

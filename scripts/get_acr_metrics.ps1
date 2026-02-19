@@ -3,7 +3,7 @@
 #
 # Requires: Azure CLI logged in (az login)
 #
-# Retrieves Peak, P95 and Average values for last N days (default 30):
+# Retrieves Peak, P95 and Average values for last N days (default 7):
 #   - Used Memory RSS (bytes and GB)
 #   - Server Load (%)
 #   - Connected Clients
@@ -24,7 +24,7 @@ param(
     [string]$CacheName,
     
     [Parameter(Mandatory=$false)]
-    [int]$Days = 30
+    [int]$Days = 7
 )
 
 Write-Host "============================================================"
