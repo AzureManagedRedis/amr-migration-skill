@@ -132,6 +132,10 @@ This skill leverages:
 - **SKU Mapping Data**: Internal spreadsheet (requires updates to `references/sku-mapping.md`)
 - **Azure CLI Reference**: `references/azure-cli-commands.md`
 
+## Feedback & Issues
+
+We welcome your feedback! If you have suggestions, feature requests, or run into any problems, please [open an issue](https://github.com/AzureManagedRedis/amr-migration-skill/issues) on GitHub. Whether it's a bug report, an idea for improvement, or a question about usage — we'd love to hear from you.
+
 ## Contributing
 
 1. Keep documentation up-to-date with latest Azure Redis features
