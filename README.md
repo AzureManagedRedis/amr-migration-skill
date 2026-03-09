@@ -159,7 +159,7 @@ The `grader_context` in `eval-config.json` includes domain facts (valid SKU name
 
 This skill leverages:
 - **Microsoft Learn MCP Server**: `https://learn.microsoft.com/api/mcp` for up-to-date Azure documentation
-- **SKU Mapping Data**: Internal spreadsheet (requires updates to `references/sku-mapping.md`)
+- **SKU Mapping Data**: `references/sku-mapping.md`
 - **Azure CLI Reference**: `references/azure-cli-commands.md`
 
 ## Feedback & Issues

@@ -63,7 +63,7 @@ PUT {basePath}?api-version=2025-08-01-preview
 - `cacheResourceType`: Always `"AzureCacheForRedis"` for ACR → AMR migrations.
 - `forceMigrate`: When `true`, bypasses validation warnings (not errors). Default `false`.
 - `switchDns`: When `true`, the old ACR hostname (`.redis.cache.windows.net`) is re-pointed to the AMR cache via DNS. Currently hardcoded to `true` in both scripts — this is the core value of automated migration.
-- `skipDataMigration`: Currently hardcoded to `true` because data migration is not yet supported (planned for May 2026). When data migration becomes available, this field will control whether cache data is copied.
+- `skipDataMigration`: Currently hardcoded to `true` because data migration is not yet supported. When data migration becomes available, this field will control whether cache data is copied.
 
 **Response**: Returns the migration resource with `provisioningState` (`Accepted` → `InProgress` → `Succeeded`/`Failed`).
 

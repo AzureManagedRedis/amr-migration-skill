@@ -212,7 +212,7 @@ For detailed documentation on the underlying ARM API endpoints, request/response
 - VNet injected caches
 - Geo-Replication enabled caches
 
-These exclusions are on the roadmap for future releases.
+These exclusions are expected to be supported in future releases.
 
 **Requirements**:
 - Source and target must be in the **same Azure region** (validation error if not)
@@ -225,7 +225,7 @@ These exclusions are on the roadmap for future releases.
 - OSS cache port (via port forwarding)
 
 **Artifacts NOT migrated** (manual action required after migration):
-- Cache data (planned for May 2026)
+- Cache data (not yet supported)
 - Entra ID configurations
 - Auto-update schedules
 - Custom ACL definitions
