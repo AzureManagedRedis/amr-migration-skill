@@ -182,6 +182,268 @@ Use these values to:
 3. Validate data integrity
 4. Switch application traffic to new cache
 
+---
+
+## Automated Migration (ARM REST API)
+
+Azure now offers an **automated migration path** from Azure Cache for Redis (ACR) to Azure Managed Redis (AMR) via ARM REST APIs. This handles DNS switching automatically so clients using the old OSS endpoint continue to work after migration. Two utility scripts wrap these APIs:
+
+- **PowerShell** (`scripts/Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1`) — uses Az PowerShell module (`Invoke-AzRestMethod`)
+- **Bash** (`scripts/azure-redis-migration-arm-rest-api-utility.sh`) — uses Azure CLI (`az rest`), works on Linux, macOS, and WSL
+
+> **Important**: This feature is currently in **Public Preview**. Use the manual migration strategies (Steps 1–4 above) for production workloads until GA, or if your cache falls outside the supported scope below.
+
+### Supported Scope
+
+**Supported source SKUs**: All Basic (C0–C6), Standard (C0–C6), and Premium (P1–P5) — **except**:
+- Private Link enabled caches
+- VNet injected caches
+- Geo-Replication enabled caches
+
+These exclusions are on the roadmap for future releases.
+
+**Artifacts migrated automatically**:
+- Access keys (if enabled on the source)
+- OSS host endpoint (via DNS switch — the old `.redis.cache.windows.net` hostname routes to AMR)
+- OSS cache port (via port forwarding)
+
+**Artifacts NOT migrated** (manual action required after migration):
+- Cache data (planned for May 2026)
+- Entra ID configurations
+- Auto-update schedules
+- Custom ACL definitions
+- Keyspace notifications
+- User-assigned managed identities
+- Data persistence configuration
+
+### Prerequisites
+
+#### PowerShell (Windows)
+
+1. **Az PowerShell module** (v15.4.0+) — the script uses `Invoke-AzRestMethod` and `Get-AzContext`:
+   ```powershell
+   Install-Module -Name Az -AllowClobber -Scope CurrentUser
+   ```
+2. **PowerShell 7 (x64)** recommended.
+3. **Unblock the script** (Windows only):
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force -Scope CurrentUser
+   Unblock-File -Path ".\scripts\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1"
+   ```
+4. **Login to Azure**:
+   ```powershell
+   Connect-AzAccount
+   Set-AzContext -Subscription <subscriptionId>
+   ```
+
+#### Bash (Linux / macOS / WSL)
+
+1. **Azure CLI** (`az`) installed and logged in:
+   ```bash
+   az login
+   az account set --subscription <subscriptionId>
+   ```
+2. **jq** installed for JSON processing:
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install jq
+   # macOS
+   brew install jq
+   ```
+3. **Make the script executable**:
+   ```bash
+   chmod +x ./scripts/azure-redis-migration-arm-rest-api-utility.sh
+   ```
+
+#### Canary / EUAP Region Access
+
+If testing in canary regions (East US 2 EUAP, Central US EUAP), the subscription needs additional setup:
+1. Register the EUAP feature:
+   ```powershell
+   az feature register --namespace Microsoft.Resources --name EUAPParticipation
+   az feature register --namespace Microsoft.Cache --name eus2euap-09976aa4-e123-47e9-a515-51cac2ffc3ad
+   ```
+2. Ask the Azure Redis PG team to approve the feature registration.
+3. Grant the **"RedisEnterprise Service"** principal **"Redis Cache Contributor"** role on the subscription (temporary workaround).
+
+### Automated Migration Workflow
+
+The migration utility supports four actions: **Validate → Migrate → Status → Cancel (Rollback)**.
+
+#### 1. Validate
+
+Performs a dry-run comparison of source and target cache configurations. Returns validation **errors** (blocking) and **warnings** (overridable with `-ForceMigrate $true` / `--force-migrate`).
+
+```powershell
+# PowerShell
+.\scripts\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 `
+  -Action "Validate" `
+  -SourceResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<acrName>" `
+  -TargetResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>"
+```
+
+```bash
+# Bash
+./scripts/azure-redis-migration-arm-rest-api-utility.sh \
+  --action Validate \
+  --source "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<acrName>" \
+  --target "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>"
+```
+
+> **Always validate before migrating.** Fix any errors before proceeding. Warnings can be bypassed with `-ForceMigrate $true` if the user accepts the trade-offs.
+
+#### 2. Migrate
+
+Triggers the actual migration (~5+ minutes). DNS is switched automatically so existing clients using the old OSS endpoint are routed to the new AMR cache.
+
+```powershell
+# PowerShell — Fire-and-forget (check status separately)
+.\scripts\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 `
+  -Action "Migrate" `
+  -SourceResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<acrName>" `
+  -TargetResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>"
+
+# PowerShell — Wait for completion (blocking)
+.\scripts\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 `
+  -Action "Migrate" `
+  -SourceResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<acrName>" `
+  -TargetResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>" `
+  -TrackMigration
+
+# PowerShell — Force migrate (bypass validation warnings)
+.\scripts\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 `
+  -Action "Migrate" `
+  -SourceResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<acrName>" `
+  -TargetResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>" `
+  -ForceMigrate $true
+```
+
+```bash
+# Bash — Fire-and-forget
+./scripts/azure-redis-migration-arm-rest-api-utility.sh \
+  --action Migrate \
+  --source "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<acrName>" \
+  --target "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>"
+
+# Bash — Wait for completion
+./scripts/azure-redis-migration-arm-rest-api-utility.sh \
+  --action Migrate \
+  --source "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<acrName>" \
+  --target "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>" \
+  --track
+
+# Bash — Force migrate (bypass validation warnings)
+./scripts/azure-redis-migration-arm-rest-api-utility.sh \
+  --action Migrate \
+  --source "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<acrName>" \
+  --target "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>" \
+  --force-migrate
+```
+
+#### 3. Check Status
+
+Poll the migration status (only requires TargetResourceId):
+
+```powershell
+# PowerShell
+.\scripts\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 `
+  -Action "Status" `
+  -TargetResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>"
+```
+
+```bash
+# Bash
+./scripts/azure-redis-migration-arm-rest-api-utility.sh \
+  --action Status \
+  --target "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>"
+```
+
+#### 4. Cancel / Rollback
+
+Cancel a failed or completed migration. Reverses DNS changes (~5+ minutes):
+
+```powershell
+# PowerShell — Fire-and-forget
+.\scripts\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 `
+  -Action "Cancel" `
+  -TargetResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>"
+
+# PowerShell — Wait for completion
+.\scripts\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 `
+  -Action "Cancel" `
+  -TargetResourceId "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>" `
+  -TrackMigration
+```
+
+```bash
+# Bash — Fire-and-forget
+./scripts/azure-redis-migration-arm-rest-api-utility.sh \
+  --action Cancel \
+  --target "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>"
+
+# Bash — Wait for completion
+./scripts/azure-redis-migration-arm-rest-api-utility.sh \
+  --action Cancel \
+  --target "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<amrName>" \
+  --track
+```
+
+### Script Parameters Reference
+
+| PowerShell | Bash | Required | Description |
+|-----------|------|----------|-------------|
+| `-Action` | `--action`, `-a` | Yes | `Validate`, `Migrate`, `Status`, or `Cancel` |
+| `-SourceResourceId` | `--source`, `-s` | Validate, Migrate | Full ARM resource ID of the source ACR cache (`Microsoft.Cache/Redis/<name>`) |
+| `-TargetResourceId` | `--target`, `-t` | Always | Full ARM resource ID of the target AMR cache (`Microsoft.Cache/redisEnterprise/<name>`) |
+| `-ForceMigrate $true` | `--force-migrate` | No | Bypass validation warnings (default: false) |
+| `-TrackMigration` | `--track` | No | Wait for long-running operation to complete (default: off) |
+| `-Environment` | — | No | Azure environment (default: `AzureCloud`). PowerShell only; bash uses whatever `az` is logged into |
+
+### Portal Alternative
+
+Automated migration is also available via the Azure Portal behind a feature flag:
+- **Portal URL**: [https://aka.ms/redis/portal/prod/migrate](https://aka.ms/redis/portal/prod/migrate)
+- Navigate to the source ACR cache → click **Migrate** → follow the wizard
+- After completion, a link to the target AMR cache is displayed
+- Use the **Rollback Migration** button to revert
+
+### Validation Errors Reference
+
+These are **blocking** — migration cannot proceed until resolved:
+
+| Error | Resolution |
+|-------|------------|
+| Target cluster must be in Running state | Wait for the target AMR cluster to reach Running state |
+| Target resource must have at least one database | Create at least one database on the target AMR resource |
+| Unsupported target SKU | Use an Azure Managed Redis (Gen2) SKU as the target |
+| Source and target must be in the same region | Select a target in the same Azure region as the source |
+| Geo-replication enabled on source | Disable geo-replication on the source before migration |
+| Private endpoints on source | Remove private endpoints from the source before migration |
+| VNet injection enabled on source | Use a non-VNet injected source cache |
+| TLS mismatch (source TLS-only, target non-TLS) | Configure the target database to support TLS connections |
+
+### Validation Warnings Reference
+
+These are **non-blocking** — can be bypassed with `-ForceMigrate $true`:
+
+| Warning | Resolution |
+|---------|------------|
+| Data migration not currently supported | Plan for manual data migration or accept data loss |
+| Source has multiple databases; only DB 0 migrated | Manually migrate data from other databases |
+| Missing identities on target | Add missing identities to target's access policy assignments |
+| System-assigned managed identity not copied | Configure managed identity on target after migration |
+| User-assigned managed identities not copied | Assign required managed identities to target after migration |
+| Custom ACL roles not copied | Manually recreate custom ACL roles on target |
+| Clustering policy mismatch (target clustered, source not) | Ensure client is cluster-aware or use non-clustered target |
+| OSS clustering policy mismatch | Configure OSSCluster policy on target or update application |
+| Public network access mismatch | Enable public access on target or configure private endpoints |
+| Firewall rules not copied | Document and re-create firewall rules on target |
+| TLS mode mismatch | Update client applications to use the correct TLS mode |
+| HA mismatch | Enable HA on target or accept lower SLA |
+| RDB/AOF persistence not copied | Configure persistence on target after migration |
+| Custom update schedule not copied | Configure update schedule on target after migration |
+| Keyspace notifications not copied | Enable keyspace notifications on target after migration |
+
 ## Common Questions
 
 ### What is the difference between Azure Cache for Redis (ACR) and Azure Managed Redis (AMR)?

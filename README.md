@@ -83,6 +83,13 @@ Try these prompts to get started:
 - **"I have an Azure Cache for Redis Standard C3 in westus2. Help me migrate to Azure Managed Redis."**
 - **"We're running a Premium P2 cache with 3 shards and geo-replication. What's the best AMR SKU and migration strategy?"**
 
+### Automated Migration (ARM REST API)
+- **"Validate whether my ACR cache can be migrated to AMR automatically using the migration script."**
+- **"Run the automated migration from my ACR cache `my-cache` to my AMR cache `my-amr-cache` with DNS switching."**
+- **"Check the status of my ongoing AMR migration."**
+- **"Cancel / rollback my AMR migration."**
+- **"I'm getting a validation warning about clustering policy mismatch. Should I force the migration?"**
+
 ### SKU Selection & Pricing
 - **"Compare AMR SKU options for a workload currently using 10GB of memory with high server load."**
 - **"What's the monthly cost difference between my current Standard C2 and the equivalent AMR SKU in eastus?"**
@@ -119,6 +126,8 @@ amr-migration-skill/
 │   ├── sku-mapping.md           # SKU selection guidelines & decision matrix
 │   └── amr-sku-specs.md         # AMR SKU definitions (M, B, X, Flash series)
 └── scripts/
+    ├── Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1  # Automated migration via ARM REST API (PowerShell)
+    ├── azure-redis-migration-arm-rest-api-utility.sh    # Automated migration via ARM REST API (Bash)
     ├── get_acr_metrics.ps1      # Pull ACR metrics for SKU sizing
     ├── get_acr_metrics.sh
     ├── get_redis_price.ps1      # Pricing with HA/shards/MRPP logic
