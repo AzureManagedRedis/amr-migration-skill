@@ -1,0 +1,35 @@
+{
+  "run_modes": {
+    "quick": {
+      "description": "Fast inner-loop iteration. Single model, single run. Use while editing the skill.",
+      "models": ["claude-sonnet-4.6"],
+      "runs_per_model": 1,
+      "skip_without_skill": true
+    },
+    "standard": {
+      "description": "Pre-PR validation. Two models, with and without skill comparison.",
+      "models": ["claude-sonnet-4.6", "claude-haiku-4.5"],
+      "runs_per_model": 1,
+      "skip_without_skill": false
+    },
+    "full": {
+      "description": "Full benchmark before merge. Four models, with/without skill, variance analysis.",
+      "models": ["claude-opus-4.6", "claude-sonnet-4.6", "claude-haiku-4.5", "gpt-5-mini"],
+      "runs_per_model": 2,
+      "skip_without_skill": false
+    }
+  },
+  "grader_model": "claude-sonnet-4.6",
+  "grader_context": {
+    "valid_amr_skus": {
+      "M-series": ["M10", "M20", "M50", "M100", "M150", "M250", "M350", "M500", "M700", "M1000", "M1500", "M2000"],
+      "B-series": ["B0", "B1", "B3", "B5", "B10", "B20", "B50", "B100", "B150", "B250", "B350", "B500", "B700", "B1000"],
+      "X-series": ["X3", "X5", "X10", "X20", "X50", "X100", "X150", "X250", "X350", "X500", "X700"],
+      "A-series": ["A250", "A500", "A700", "A1000", "A1500", "A2000", "A4500"]
+    },
+    "retirement_dates": {
+      "basic_standard_premium": "September 30, 2028",
+      "enterprise_enterprise_flash": "March 31, 2027"
+    }
+  }
+}

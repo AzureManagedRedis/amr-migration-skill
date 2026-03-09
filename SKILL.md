@@ -46,6 +46,9 @@ Users will typically provide a cache name, resource group, and subscription. Con
 
 If the user only provides a cache name, use `az redis show -n <name> -g <rg> --query id -o tsv` to retrieve the full resource ID. If the subscription or RG is also unknown, use `az redis list --query "[?name=='<name>'].{id:id, rg:resourceGroup}" -o table` to find it.
 
+### Validating SKU Recommendations
+Before recommending an AMR SKU to the user, cross-check it against the valid SKU list in [AMR SKU Specs](references/amr-sku-specs.md). Never recommend a SKU that doesn't appear in that file. If the ideal capacity falls between two SKU sizes, recommend the next size up.
+
 ## Available Resources
 
 > **Important**: Always use the provided scripts for pricing lookups and metrics retrieval. Do not craft custom API calls or scripts — the provided ones already handle tier-specific calculation logic (HA, shards, MRPP) and metric aggregation correctly. For metrics, use a default time range of **7 days** unless the user specifies otherwise.

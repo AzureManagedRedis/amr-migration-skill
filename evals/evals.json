@@ -1,0 +1,56 @@
+{
+  "skill_name": "amr-migration-skill",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We have an Azure Cache for Redis Standard C3 in westus2 that's using about 8GB of memory with moderate server load (~40%). We need to migrate to Azure Managed Redis. What AMR SKU should we pick, and can you give me a cost comparison?",
+      "expected_output": "Recommends an appropriate AMR SKU (M20 or B10 range) based on the C3's ~13GB capacity and 8GB usage. Uses the pricing script to look up costs rather than guessing. Mentions connection string changes (port 10000 vs 6380). Does not use the term 'shards' for AMR.",
+      "files": [],
+      "expectations": [
+        "Recommends a specific AMR SKU name (e.g., M20, B10, or similar) rather than just saying 'pick an M-series'",
+        "References or attempts to use the get_redis_price script for pricing data",
+        "Mentions the TLS port change from 6380 to 10000",
+        "Does not use the word 'shards' when describing the AMR target",
+        "Mentions or references the SKU mapping guide"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I have a Premium P2 cache called 'prod-cache-01' in resource group 'rg-prod' and an AMR cache called 'prod-amr-01' in the same RG, both in eastus. I want to do an automated migration with DNS switching. Walk me through it step by step and run the validation for me.",
+      "expected_output": "Uses the automated migration script (or az rest equivalent) to validate. Constructs proper ARM resource IDs from the cache names. Follows the Validate -> Migrate -> Status workflow. Mentions supported scope limitations (data not migrated yet).",
+      "files": [],
+      "expectations": [
+        "Constructs or shows the full ARM resource IDs for both source and target",
+        "Runs or shows the Validate action before attempting Migrate",
+        "Uses the migration script or az rest to call the ARM API — does not just describe it theoretically",
+        "Mentions that data migration is not yet supported (skipDataMigration)",
+        "Mentions the ability to rollback/cancel if needed"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Our team is running an Azure Cache for Redis Enterprise E10 with active geo-replication across 3 regions. We need to move to AMR before the retirement deadline. What's the migration path?",
+      "expected_output": "Correctly identifies that Enterprise tier is OUT OF SCOPE for this skill. Does not attempt to give detailed Enterprise migration guidance. Suggests contacting Microsoft support. Mentions the Enterprise retirement date (March 31, 2027) is different from Basic/Standard/Premium (September 30, 2028).",
+      "files": [],
+      "expectations": [
+        "States that Enterprise tier migration is not covered by this skill",
+        "Suggests contacting Microsoft support or official documentation for Enterprise guidance",
+        "Does not attempt to provide a detailed Enterprise-to-AMR migration plan",
+        "Mentions at least one retirement date correctly (Enterprise: March 2027 or B/S/P: September 2028)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I'm running a Premium P1 cache with VNet injection and private endpoints in eastus2. It also has geo-replication set up with a secondary in westus2. Can I use the automated migration API to move to AMR?",
+      "expected_output": "Correctly identifies that this cache is NOT eligible for automated migration due to VNet injection, private endpoints, and geo-replication — all three are unsupported. Recommends manual migration strategies instead. Mentions the need to switch from VNet injection to Private Link on AMR.",
+      "files": [],
+      "expectations": [
+        "Identifies VNet injection as a blocker for automated migration",
+        "Identifies geo-replication as a blocker for automated migration",
+        "Identifies private endpoints as a blocker for automated migration",
+        "Suggests a manual migration strategy as an alternative",
+        "Mentions that AMR uses Private Link instead of VNet injection"
+      ]
+    }
+  ]
+}

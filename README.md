@@ -116,6 +116,9 @@ amr-migration-skill/
 ├── SKILL.md              # Main skill definition and instructions
 ├── README.md             # This file
 ├── TODO.md               # Roadmap items
+├── evals/
+│   ├── evals.json            # Test cases with prompts and assertions
+│   └── eval-config.json      # Run modes (quick/standard/full) and grader context
 ├── references/
 │   ├── amr-sku-specs.md         # AMR SKU definitions (M, B, X, Flash series)
 │   ├── azure-cli-commands.md    # Azure CLI reference for ACR discovery
@@ -135,6 +138,23 @@ amr-migration-skill/
     ├── get_redis_price.ps1      # Pricing with HA/shards/MRPP logic
     └── get_redis_price.sh
 ```
+
+## Evaluation & Benchmarking
+
+The skill includes test cases in `evals/` to measure quality. Three run modes are defined in `eval-config.json`:
+
+| Mode | Models | Runs | Without-Skill Baseline | Use When |
+|------|--------|------|----------------------|----------|
+| **quick** | Sonnet | 1× | Skipped | Iterating on skill content |
+| **standard** | Sonnet + Haiku | 1× | Included | Before opening a PR |
+| **full** | Opus + Sonnet + Haiku + GPT-5-mini | 2× | Included | Before merging |
+
+To run evals, ask Copilot CLI:
+```
+Run the amr-migration-skill evals in quick mode
+```
+
+The `grader_context` in `eval-config.json` includes domain facts (valid SKU names, retirement dates) so the grader doesn't hallucinate during evaluation.
 
 ## External Resources
 
