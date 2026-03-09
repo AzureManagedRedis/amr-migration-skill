@@ -205,6 +205,11 @@ For detailed documentation on the underlying ARM API endpoints, request/response
 
 These exclusions are on the roadmap for future releases.
 
+**Requirements**:
+- Source and target must be in the **same Azure region** (validation error if not)
+- Source and target must be in the **same subscription**
+- The target AMR cache must be in **Running** state with at least one database
+
 **Artifacts migrated automatically**:
 - Access keys (if enabled on the source)
 - OSS host endpoint (via DNS switch — the old `.redis.cache.windows.net` hostname routes to AMR)

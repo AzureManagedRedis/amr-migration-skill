@@ -12,6 +12,7 @@ These are **blocking** — migration cannot proceed until resolved:
 | Target resource must have at least one database | Create at least one database on the target AMR resource |
 | Unsupported target SKU | Use an Azure Managed Redis (Gen2) SKU as the target |
 | Source and target must be in the same region | Select a target in the same Azure region as the source |
+| Source and target must be in the same subscription | Move or recreate the target AMR cache in the same subscription as the source |
 | Geo-replication enabled on source | Disable geo-replication on the source before migration |
 | Private endpoints on source | Remove private endpoints from the source before migration |
 | VNet injection enabled on source | Use a non-VNet injected source cache |

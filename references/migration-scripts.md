@@ -134,3 +134,4 @@ No request body. Reverses the DNS switch and port forwarding. Takes ~5 minutes. 
 | 415 Unsupported Media Type | Missing `Content-Type: application/json` header | Already handled by both scripts; if seen with raw `az rest`, add `--headers "Content-Type=application/json"` |
 | 409 Conflict | Migration already in progress or target not in Running state | Check `Status` first; wait for any pending operations |
 | Source and target must be in the same region | Caches are in different Azure regions | Create the target AMR cache in the same region as the source ACR cache |
+| Source and target must be in the same subscription | Caches are in different subscriptions | Create the target AMR cache in the same subscription as the source ACR cache |
