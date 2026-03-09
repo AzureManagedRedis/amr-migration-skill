@@ -137,6 +137,7 @@ arm_rest() {
     local url="$2"
     local body="${3:-}"
     local response
+    local tmpfile=""
 
     local args=(
         --method "$method"
@@ -147,7 +148,6 @@ arm_rest() {
 
     if [[ -n "$body" ]]; then
         # Write body to temp file to avoid shell escaping issues
-        local tmpfile
         tmpfile=$(mktemp)
         echo "$body" > "$tmpfile"
         args+=(--body "@${tmpfile}")
@@ -156,15 +156,14 @@ arm_rest() {
     if response=$(az rest "${args[@]}" 2>&1); then
         success "The request is successful."
         echo "$response" | jq .
-        local exit_code=0
+        [[ -n "$tmpfile" ]] && rm -f "$tmpfile"
+        return 0
     else
-        local exit_code=$?
         echo -e "${RED}The request encountered a failure.${NC}" >&2
         echo "$response" >&2
+        [[ -n "$tmpfile" ]] && rm -f "$tmpfile"
+        return 1
     fi
-
-    [[ -n "${tmpfile:-}" ]] && rm -f "$tmpfile"
-    return $exit_code
 }
 
 # Poll migration status until terminal state

@@ -117,14 +117,16 @@ amr-migration-skill/
 ├── README.md             # This file
 ├── TODO.md               # Roadmap items
 ├── references/
+│   ├── amr-sku-specs.md         # AMR SKU definitions (M, B, X, Flash series)
 │   ├── azure-cli-commands.md    # Azure CLI reference for ACR discovery
 │   ├── feature-comparison.md    # ACR vs AMR feature matrix
 │   ├── mcp-server-config.md     # MCP server setup for live documentation
 │   ├── migration-overview.md    # Migration strategies and guidance
+│   ├── migration-scripts.md     # Automated migration scripts deep-dive & API reference
+│   ├── migration-validation.md  # Validation errors & warnings reference
 │   ├── pricing-tiers.md         # Pricing calculation rules
 │   ├── retirement-faq.md        # ACR retirement dates and FAQ
-│   ├── sku-mapping.md           # SKU selection guidelines & decision matrix
-│   └── amr-sku-specs.md         # AMR SKU definitions (M, B, X, Flash series)
+│   └── sku-mapping.md           # SKU selection guidelines & decision matrix
 └── scripts/
     ├── Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1  # Automated migration via ARM REST API (PowerShell)
     ├── azure-redis-migration-arm-rest-api-utility.sh    # Automated migration via ARM REST API (Bash)
