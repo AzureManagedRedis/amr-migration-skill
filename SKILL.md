@@ -49,6 +49,15 @@ If the user only provides a cache name, use `az redis show -n <name> -g <rg> --q
 ### Validating SKU Recommendations
 Before recommending an AMR SKU to the user, cross-check it against the valid SKU list in [AMR SKU Specs](references/amr-sku-specs.md). Never recommend a SKU that doesn't appear in that file. If the ideal capacity falls between two SKU sizes, recommend the next size up.
 
+### Connection Changes Reminder
+Always mention these when discussing migration — they require application changes:
+- **TLS port**: ACR uses **6380** → AMR uses **10000**
+- **Non-TLS**: ACR 6379 → not supported on AMR
+- **DNS suffix**: `.redis.cache.windows.net` → `<region>.redis.azure.net`
+- **Redis version**: 6 → 7.4
+
+If the user is using the automated migration with DNS switching, the old hostname continues to work, but the port change still applies.
+
 ## Available Resources
 
 > **Important**: Always use the provided scripts for pricing lookups and metrics retrieval. Do not craft custom API calls or scripts — the provided ones already handle tier-specific calculation logic (HA, shards, MRPP) and metric aggregation correctly. For metrics, use a default time range of **7 days** unless the user specifies otherwise.

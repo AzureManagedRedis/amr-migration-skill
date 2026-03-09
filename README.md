@@ -115,7 +115,6 @@ Try these prompts to get started:
 amr-migration-skill/
 ├── SKILL.md              # Main skill definition and instructions
 ├── README.md             # This file
-├── TODO.md               # Roadmap items
 ├── evals/
 │   ├── evals.json            # Test cases with prompts and assertions
 │   └── eval-config.json      # Run modes (quick/standard/full) and grader context
