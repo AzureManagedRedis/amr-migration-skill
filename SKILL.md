@@ -272,17 +272,6 @@ These exclusions are on the roadmap for future releases.
    chmod +x ./scripts/azure-redis-migration-arm-rest-api-utility.sh
    ```
 
-#### Canary / EUAP Region Access
-
-If testing in canary regions (East US 2 EUAP, Central US EUAP), the subscription needs additional setup:
-1. Register the EUAP feature:
-   ```powershell
-   az feature register --namespace Microsoft.Resources --name EUAPParticipation
-   az feature register --namespace Microsoft.Cache --name eus2euap-09976aa4-e123-47e9-a515-51cac2ffc3ad
-   ```
-2. Ask the Azure Redis PG team to approve the feature registration.
-3. Grant the **"RedisEnterprise Service"** principal **"Redis Cache Contributor"** role on the subscription (temporary workaround).
-
 ### Automated Migration Workflow
 
 The migration utility supports four actions: **Validate → Migrate → Status → Cancel (Rollback)**.
