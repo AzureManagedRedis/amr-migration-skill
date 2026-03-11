@@ -164,6 +164,8 @@ Both values are in MB. **Actual Usable = SKU Capacity − (maxmemoryReserved + m
 - Connected Clients
 - Network Bandwidth — Cache Read and Cache Write (bytes/sec)
 
+> **Clustered caches**: For Premium caches with multiple shards, the scripts automatically detect the shard count and aggregate metrics across all shards. Memory and bandwidth are **summed** (total capacity), while Server Load and Connected Clients report the **max per shard** (bottleneck value). The output header indicates when shard aggregation is active.
+
 Use these values to:
 1. Size the target AMR SKU (usable memory ≥ peak used memory — no extra buffer needed with an eviction policy)
 2. Choose tier (high Server Load + low memory → Compute Optimized X-series)
