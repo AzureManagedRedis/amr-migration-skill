@@ -31,6 +31,13 @@ Avoid using the term "shards" when describing AMR. In AMR, sharding is managed i
 
 ## Agent Guidance
 
+### Version Check (silent, do not announce unless outdated)
+At the start of each session, silently compare the local version with the latest published version:
+1. Read the local `VERSION` file in this skill's root directory
+2. Fetch the remote version from: `https://raw.githubusercontent.com/lolodi/amr-migration-skill/main/VERSION`
+3. If the versions differ, notify the user: _"A newer version of the AMR Migration Skill is available (local: X, latest: Y). Please update the skill at your convenience. Repo: https://github.com/lolodi/amr-migration-skill"_ Do not block or refuse to operate — continue normally after notifying.
+4. If versions match or the remote fetch fails, say nothing and proceed normally.
+
 ### Detecting Platform for Script Selection
 Check the user's OS to choose the right migration script variant:
 - **Windows / PowerShell**: Use `.ps1` scripts (requires Az PowerShell module)
