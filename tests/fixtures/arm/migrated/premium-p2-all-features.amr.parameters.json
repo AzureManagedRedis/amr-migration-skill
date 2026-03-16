@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migratedFrom": "premium-p2-all-features.parameters.json",
+    "_migrationDate": "2026-02-27",
+    "_sourceSkuInfo": "Premium P2 x 3 shards → Balanced_B50"
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "acr-test-premium-p2-all"
+    },
+    "location": {
+      "value": "westus"
+    },
+    "skuName": {
+      "value": "Balanced_B50"
+    },
+    "evictionPolicy": {
+      "value": "VolatileLFU"
+    },
+    "clusteringPolicy": {
+      "value": "OSSCluster"
+    },
+    "rdbEnabled": {
+      "value": true
+    },
+    "rdbFrequency": {
+      "value": "6h"
+    },
+    "aofEnabled": {
+      "value": false
+    },
+    "enablePrivateEndpoint": {
+      "value": true
+    },
+    "zones": {
+      "value": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "tags": {
+      "value": {
+        "Environment": "Test",
+        "Service": "MigrationValidation",
+        "ManagedBy": "IaC",
+        "CostCenter": "99999",
+        "HasAllFeatures": "true",
+        "MigratedFrom": "ACR"
+      }
+    }
+  }
+}

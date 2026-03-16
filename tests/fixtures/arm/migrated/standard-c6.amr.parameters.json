@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migratedFrom": "standard-c6.parameters.json",
+    "_migrationDate": "2026-02-27",
+    "_sourceSkuInfo": "Standard C6 → MemoryOptimized_M50"
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "acr-test-standard-c6"
+    },
+    "location": {
+      "value": "westus"
+    },
+    "skuName": {
+      "value": "MemoryOptimized_M50"
+    },
+    "evictionPolicy": {
+      "value": "VolatileTTL"
+    },
+    "clusteringPolicy": {
+      "value": "EnterpriseCluster"
+    },
+    "rdbEnabled": {
+      "value": false
+    },
+    "rdbFrequency": {
+      "value": "1h"
+    },
+    "aofEnabled": {
+      "value": false
+    },
+    "enablePrivateEndpoint": {
+      "value": false
+    },
+    "zones": {
+      "value": null
+    },
+    "tags": {
+      "value": {
+        "Environment": "Test",
+        "Service": "MigrationValidation",
+        "MigratedFrom": "ACR"
+      }
+    }
+  }
+}

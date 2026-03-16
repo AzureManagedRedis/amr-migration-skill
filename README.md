@@ -9,6 +9,7 @@ This skill assists AI agents in helping users:
 - Select appropriate AMR SKUs based on existing ACR cache configurations
 - Plan and execute migrations with best practices
 - Troubleshoot common migration issues
+- **Migrate Bicep/ARM templates from ACR to AMR for new region buildouts**
 
 ## Usage
 
@@ -102,28 +103,117 @@ Try these prompts to get started:
 - **"What port does AMR use? Our app currently connects on 6380."**
 - **"What changes do I need to make to my connection string when moving to AMR?"**
 
+### IaC / Template Migration
+- **"Convert my ACR Bicep template to AMR."**
+- **"I'm doing a new region buildout — update my ARM template from ACR to AMR."**
+- **"Transform this Premium P2 clustered Redis template to AMR with pricing comparison."**
+
 ## Skill Structure
 
 ```
 amr-migration-skill/
-├── SKILL.md              # Main skill definition and instructions
-├── README.md             # This file
-├── TODO.md               # Roadmap items
-├── references/
-│   ├── azure-cli-commands.md    # Azure CLI reference for ACR discovery
-│   ├── feature-comparison.md    # ACR vs AMR feature matrix
-│   ├── mcp-server-config.md     # MCP server setup for live documentation
-│   ├── migration-overview.md    # Migration strategies and guidance
-│   ├── pricing-tiers.md         # Pricing calculation rules
-│   ├── retirement-faq.md        # ACR retirement dates and FAQ
-│   ├── sku-mapping.md           # SKU selection guidelines & decision matrix
-│   └── amr-sku-specs.md         # AMR SKU definitions (M, B, X, Flash series)
-└── scripts/
-    ├── get_acr_metrics.ps1      # Pull ACR metrics for SKU sizing
-    ├── get_acr_metrics.sh
-    ├── get_redis_price.ps1      # Pricing with HA/shards/MRPP logic
-    └── get_redis_price.sh
+├── SKILL.md                        # Copilot skill definition and instructions
+├── README.md                       # This file
+├── TODO.md                         # Roadmap items
+│
+├── iac/                            # IaC migration tooling (standalone, no skill dependency)
+│   ├── README.md                   # Full IaC migration + validation guide
+│   ├── Convert-AcrToAmr.ps1       # Main migration script (ARM/Bicep/Terraform)
+│   ├── Validate-Migration.ps1     # Post-migration deploy + assert
+│   └── references/
+│       ├── iac-migration.md       # Transformation rules reference
+│       └── iac-validation.md      # Validation matrix
+│
+├── references/                     # Skill knowledge base (used by SKILL.md)
+│   ├── sku-mapping.md             # SKU selection guidelines & decision matrix
+│   ├── amr-sku-specs.md           # AMR SKU definitions (M, B, X, Flash series)
+│   ├── feature-comparison.md      # ACR vs AMR feature matrix
+│   ├── migration-overview.md      # Migration strategies and guidance
+│   ├── pricing-tiers.md           # Pricing calculation rules
+│   ├── retirement-faq.md          # ACR retirement dates and FAQ
+│   ├── azure-cli-commands.md      # Azure CLI reference for ACR discovery
+│   └── mcp-server-config.md       # MCP server setup for live documentation
+│
+└── scripts/                        # Standalone utility scripts
+    ├── AmrMigrationHelpers.ps1          # Shared AMR SKU data, pricing, node count functions
+    ├── get_redis_price.ps1         # Pricing with HA/shards/MRPP logic
+    ├── get_redis_price.sh
+    ├── get_acr_metrics.ps1         # Pull ACR metrics for SKU sizing
+    └── get_acr_metrics.sh
 ```
+
+## Standalone IaC Migration (No Copilot CLI Required)
+
+> 📖 **Full guide**: [iac/README.md](iac/README.md) — complete documentation with transformation rules, validation workflow, SKU tables, troubleshooting, and FAQ.
+
+The `Convert-AcrToAmr.ps1` script enables IaC template migration without any AI/Copilot dependency:
+
+```powershell
+# ARM JSON migration with pricing comparison
+.\iac\Convert-AcrToAmr.ps1 -TemplatePath .\acr-cache.json -Region westus2
+
+# With parameters file (separate template + params)
+.\iac\Convert-AcrToAmr.ps1 -TemplatePath .\acr-cache.json -ParametersPath .\acr-cache.parameters.json -Region westus2
+
+# Bicep template migration
+.\iac\Convert-AcrToAmr.ps1 -TemplatePath .\acr-cache.bicep -Region westus2
+
+# Terraform migration
+.\iac\Convert-AcrToAmr.ps1 -TemplatePath .\main.tf -Region westus2
+
+# Non-interactive (CI/CD pipelines)
+.\iac\Convert-AcrToAmr.ps1 -TemplatePath .\acr-cache.json -Region westus2 -Force -SkipPricing
+
+# Analysis only (no file generation)
+.\iac\Convert-AcrToAmr.ps1 -TemplatePath .\acr-cache.json -Region westus2 -AnalyzeOnly
+
+# Override target SKU
+.\iac\Convert-AcrToAmr.ps1 -TemplatePath .\acr-cache.json -Region westus2 -TargetSku Balanced_B50
+```
+
+**Key parameters:**
+| Parameter | Description |
+|-----------|-------------|
+| `-TemplatePath` | Path to source ACR template (.json, .bicep, .tf) |
+| `-ParametersPath` | Optional ARM/Bicep parameters file |
+| `-Region` | Azure region (required for pricing) |
+| `-Force` | Skip interactive confirmation |
+| `-SkipPricing` | Skip Azure Retail Prices API calls |
+| `-AnalyzeOnly` | Run analysis only (no transformation) |
+| `-ReturnObject` | Return structured PSObject (for script/skill integration) |
+| `-TargetSku` | Override auto-detected AMR SKU |
+| `-ClusteringPolicy` | `OSSCluster` (default, recommended) or `EnterpriseCluster` |
+| `-OutputDirectory` | Custom output folder (default: `./migrated/`) |
+| `-SubscriptionId` | Azure subscription ID (enables metrics-based SKU suggestion) |
+| `-ResourceGroup` | Azure resource group (enables metrics-based SKU suggestion) |
+
+### ARM Template Parsing
+
+The script uses a two-tier parsing strategy for ARM/Bicep templates:
+
+1. **PSRule.Rules.Azure** (preferred): Full offline ARM expression resolution via `Export-AzRuleTemplateData`. Resolves `parameters()`, `variables()`, `concat()`, `if()`, `resourceGroup().location`, nested expressions, and `defaultValue` fallbacks — all without Azure connectivity.
+2. **Basic resolver** (fallback): Simple `[parameters('x')]` → params file lookup. Used when PSRule is unavailable or fails.
+
+**PSRule auto-install**: If `PSRule.Rules.Azure` is not installed, the script attempts `Install-Module -Scope CurrentUser` automatically. If that fails, it falls back to the basic resolver with a warning.
+
+To install manually:
+```powershell
+Install-Module -Name PSRule.Rules.Azure -Scope CurrentUser -Force
+```
+
+**Requirements:** PowerShell 7.0+ (cross-platform: Windows, macOS, Linux). Install: https://aka.ms/install-powershell. Bicep input/output requires Azure CLI with Bicep extension.
+
+### Shared Module: AmrMigrationHelpers.ps1
+
+All AMR SKU specifications (44 SKUs across M/B/X/Flash tiers), pricing API calls, and node count calculations are centralized in `scripts/AmrMigrationHelpers.ps1`. This eliminates data duplication across scripts:
+
+- **`$script:AmrSkuSpecs`** — Canonical SKU table (Advertised/Usable GB, VCPUs, MaxConnections)
+- **`Get-AmrSkuSizes`** — Derives tier-filtered size→specs lookup from the canonical table
+- **`Get-RetailPrice`** — Azure Retail Prices API wrapper
+- **`Get-CacheNodeCount`** — Unified node count logic (ACR Basic/Standard/Premium + AMR HA/non-HA)
+- **`Get-MetricsBasedSkuSuggestion`** — Maps Azure Monitor metrics to AMR SKU recommendations
+
+The module is dot-sourced by `Convert-AcrToAmr.ps1` and `get_redis_price.ps1`.
 
 ## External Resources
 

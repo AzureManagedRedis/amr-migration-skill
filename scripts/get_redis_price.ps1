@@ -10,6 +10,8 @@
 #   -Replicas N    Replicas per primary (ACR Premium MRPP, default: 1)
 #   -Currency X    Currency code (default: USD)
 #
+# Uses shared functions from AmrMigrationHelpers.ps1 (Get-RetailPrice, Get-CacheNodeCount)
+#
 # Examples:
 #   .\get_redis_price.ps1 -SKU M10 -Region westus2
 #   .\get_redis_price.ps1 -SKU M10 -Region westus2 -NoHA
@@ -19,9 +21,11 @@
 
 param(
     [Parameter(Mandatory=$true)]
+    [ValidateNotNullOrEmpty()]
     [string]$SKU,
 
     [Parameter(Mandatory=$true)]
+    [ValidateNotNullOrEmpty()]
     [string]$Region,
 
     [Parameter(Mandatory=$false)]
@@ -32,20 +36,31 @@ param(
     [switch]$NoHA,
 
     [Parameter(Mandatory=$false)]
+    [ValidateRange(1, 30)]
     [int]$Shards = 1,
 
     [Parameter(Mandatory=$false)]
+    [ValidateRange(1, 3)]
     [int]$Replicas = 1,
 
     [Parameter(Mandatory=$false)]
+    [ValidateNotNullOrEmpty()]
     [string]$Currency = "USD"
 )
 
-# Determine product type and meter name from SKU prefix
+# Dot-source shared AMR data module
+$sharedModulePath = Join-Path $PSScriptRoot "AmrMigrationHelpers.ps1"
+if (Test-Path $sharedModulePath) {
+    . $sharedModulePath
+} else {
+    Write-Error "AmrMigrationHelpers.ps1 not found at $sharedModulePath"
+    exit 1
+}
+
+# Determine product type from SKU prefix
 $firstChar = $SKU.Substring(0, 1).ToUpper()
 $meterName = "$SKU Cache Instance"
 $product = "AMR"
-$nodes = 2
 
 switch ($firstChar) {
     "C" {
@@ -55,25 +70,16 @@ switch ($firstChar) {
             Write-Host "Example: .\get_redis_price.ps1 -SKU C3 -Region westus2 -Tier Standard"
             exit 1
         }
-        if ($Tier -eq "Basic") {
-            $nodes = 1
-        } else {
-            $nodes = 2
-        }
+        $nodes = Get-CacheNodeCount -Tier $Tier
     }
     "P" {
         $product = "ACR"
         $Tier = "Premium"
-        # Premium: shards * (1 primary + replicas)
-        $nodes = $Shards * (1 + $Replicas)
+        $nodes = Get-CacheNodeCount -Tier "Premium" -ShardCount $Shards -ReplicasPerPrimary $Replicas
     }
     { $_ -in "M", "B", "X", "A" } {
         $product = "AMR"
-        if ($NoHA) {
-            $nodes = 1
-        } else {
-            $nodes = 2
-        }
+        $nodes = Get-CacheNodeCount -Tier "AMR" -HA (-not $NoHA)
     }
     default {
         Write-Host "ERROR: Unknown SKU prefix '$firstChar'. Valid: C (Basic/Standard), P (Premium), M/B/X/A (AMR)" -ForegroundColor Red
@@ -114,29 +120,19 @@ if ($product -eq "ACR" -and $Tier -eq "Premium") {
 Write-Host "Nodes:    $nodes"
 Write-Host ""
 
-# Build API URL
-$filter = "serviceName eq 'Redis Cache' and armRegionName eq '$Region' and type eq 'Consumption' and meterName eq '$meterName'"
-$url = "https://prices.azure.com/api/retail/prices?currencyCode=%27${Currency}%27&`$filter=$filter"
-
 Write-Host "Querying pricing API..."
 Write-Host ""
 
-try {
-    $response = Invoke-RestMethod -Uri $url -Method Get
-} catch {
-    Write-Host "ERROR: API request failed" -ForegroundColor Red
-    Write-Host $_.Exception.Message -ForegroundColor Red
-    exit 1
-}
+$hourly = Get-RetailPrice -MeterName $meterName -Region $Region -Currency $Currency
 
-if ($response.Items.Count -eq 0) {
+if ($null -eq $hourly) {
     Write-Host "ERROR: No pricing found for '$meterName' in $Region" -ForegroundColor Red
-    Write-Host ""
+    $filter = "serviceName eq 'Redis Cache' and armRegionName eq '$Region' and type eq 'Consumption' and meterName eq '$meterName'"
+    $url = "https://prices.azure.com/api/retail/prices?currencyCode=%27${Currency}%27&`$filter=$filter"
     Write-Host "Debug URL: $url"
     exit 1
 }
 
-$hourly = $response.Items[0].retailPrice
 $monthly = [math]::Round($hourly * 730 * $nodes, 2)
 
 Write-Host "------------------------------------------------------------"

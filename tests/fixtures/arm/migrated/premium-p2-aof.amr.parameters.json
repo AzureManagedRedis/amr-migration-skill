@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migratedFrom": "premium-p2-aof.parameters.json",
+    "_migrationDate": "2026-02-27",
+    "_sourceSkuInfo": "Premium P2 → Balanced_B10"
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "acr-test-premium-p2-aof"
+    },
+    "location": {
+      "value": "westus"
+    },
+    "skuName": {
+      "value": "Balanced_B10"
+    },
+    "evictionPolicy": {
+      "value": "AllKeysLFU"
+    },
+    "clusteringPolicy": {
+      "value": "EnterpriseCluster"
+    },
+    "rdbEnabled": {
+      "value": false
+    },
+    "rdbFrequency": {
+      "value": "1h"
+    },
+    "aofEnabled": {
+      "value": true
+    },
+    "enablePrivateEndpoint": {
+      "value": false
+    },
+    "zones": {
+      "value": null
+    },
+    "tags": {
+      "value": {
+        "Environment": "Test",
+        "Service": "MigrationValidation",
+        "MigratedFrom": "ACR"
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migratedFrom": "premium-p1-simple.parameters.json",
+    "_migrationDate": "2026-02-27",
+    "_sourceSkuInfo": "Premium P1 → Balanced_B5"
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "acr-test-premium-p1"
+    },
+    "location": {
+      "value": "westus"
+    },
+    "skuName": {
+      "value": "Balanced_B5"
+    },
+    "evictionPolicy": {
+      "value": "VolatileLRU"
+    },
+    "clusteringPolicy": {
+      "value": "EnterpriseCluster"
+    },
+    "rdbEnabled": {
+      "value": false
+    },
+    "rdbFrequency": {
+      "value": "1h"
+    },
+    "aofEnabled": {
+      "value": false
+    },
+    "enablePrivateEndpoint": {
+      "value": false
+    },
+    "zones": {
+      "value": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "tags": {
+      "value": {
+        "Environment": "Test",
+        "Service": "MigrationValidation",
+        "MigratedFrom": "ACR"
+      }
+    }
+  }
+}

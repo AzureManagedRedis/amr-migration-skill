@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "redisCacheName": {
+      "value": "acr-test-premium-p2-fw"
+    },
+    "location": {
+      "value": "westus2"
+    },
+    "skuCapacity": {
+      "value": 2
+    },
+    "enableNonSslPort": {
+      "value": false
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "redisVersion": {
+      "value": "6"
+    },
+    "shardCount": {
+      "value": 0
+    },
+    "firewallRules": {
+      "value": [
+        {
+          "name": "AllowAppSubnet",
+          "startIP": "10.0.1.0",
+          "endIP": "10.0.1.255"
+        },
+        {
+          "name": "AllowMonitoring",
+          "startIP": "10.0.5.0",
+          "endIP": "10.0.5.255"
+        }
+      ]
+    },
+    "aadEnabled": {
+      "value": true
+    },
+    "tags": {
+      "value": {
+        "Environment": "Test",
+        "Service": "MigrationValidation"
+      }
+    }
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_description": "Azure Cache for Redis (ACR) - Basic/Standard tier ARM Template. Used as the 'before' state for AMR migration E2E tests."
+  },
+  "parameters": {
+    "redisCacheName": {
+      "type": "string",
+      "metadata": { "description": "Name of the Azure Cache for Redis instance." }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": { "description": "Azure region for the Redis cache." }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": ["Basic", "Standard"],
+      "metadata": { "description": "Pricing tier of the cache." }
+    },
+    "skuFamily": {
+      "type": "string",
+      "defaultValue": "C",
+      "allowedValues": ["C"],
+      "metadata": { "description": "SKU family. C = Basic/Standard." }
+    },
+    "skuCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 0,
+      "maxValue": 6,
+      "metadata": { "description": "Cache size (0-6)." }
+    },
+    "enableNonSslPort": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable the non-TLS port (6379)." }
+    },
+    "minimumTlsVersion": {
+      "type": "string",
+      "defaultValue": "1.2",
+      "allowedValues": ["1.0", "1.1", "1.2"],
+      "metadata": { "description": "Minimum TLS version." }
+    },
+    "redisVersion": {
+      "type": "string",
+      "defaultValue": "6",
+      "metadata": { "description": "Redis server version." }
+    },
+    "publicNetworkAccess": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": ["Enabled", "Disabled"],
+      "metadata": { "description": "Public network access." }
+    },
+    "maxmemoryPolicy": {
+      "type": "string",
+      "defaultValue": "volatile-lru",
+      "allowedValues": [
+        "volatile-lru", "allkeys-lru", "volatile-lfu", "allkeys-lfu",
+        "volatile-random", "allkeys-random", "volatile-ttl", "noeviction"
+      ],
+      "metadata": { "description": "Max memory eviction policy." }
+    },
+    "maxmemoryReserved": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Max memory reserved (MB) for non-cache operations." }
+    },
+    "maxfragmentationmemoryReserved": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Max fragmentation memory reserved (MB)." }
+    },
+    "aadEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": { "description": "Enable Microsoft Entra ID (AAD) authentication." }
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Log Analytics workspace resource ID for diagnostics." }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": { "description": "Resource tags." }
+    }
+  },
+  "variables": {
+    "baseRedisConfig": {
+      "maxmemory-policy": "[parameters('maxmemoryPolicy')]",
+      "aad-enabled": "[if(parameters('aadEnabled'), 'true', 'false')]"
+    },
+    "reservedConfig": "[if(not(empty(parameters('maxmemoryReserved'))), createObject('maxmemory-reserved', parameters('maxmemoryReserved')), createObject())]",
+    "fragConfig": "[if(not(empty(parameters('maxfragmentationmemoryReserved'))), createObject('maxfragmentationmemory-reserved', parameters('maxfragmentationmemoryReserved')), createObject())]",
+    "redisConfiguration": "[union(variables('baseRedisConfig'), variables('reservedConfig'), variables('fragConfig'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "enableNonSslPort": "[parameters('enableNonSslPort')]",
+        "minimumTlsVersion": "[parameters('minimumTlsVersion')]",
+        "redisVersion": "[parameters('redisVersion')]",
+        "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
+        "sku": {
+          "name": "[parameters('skuName')]",
+          "family": "[parameters('skuFamily')]",
+          "capacity": "[parameters('skuCapacity')]"
+        },
+        "redisConfiguration": "[variables('redisConfiguration')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('logAnalyticsWorkspaceId')))]",
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "name": "[concat(parameters('redisCacheName'), '-diag')]",
+      "scope": "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+        "metrics": [
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
+        ],
+        "logs": [
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+    },
+    "cacheHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))).hostName]"
+    },
+    "cacheSslPort": {
+      "type": "int",
+      "value": "[reference(resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))).sslPort]"
+    },
+    "cacheName": {
+      "type": "string",
+      "value": "[parameters('redisCacheName')]"
+    }
+  }
+}

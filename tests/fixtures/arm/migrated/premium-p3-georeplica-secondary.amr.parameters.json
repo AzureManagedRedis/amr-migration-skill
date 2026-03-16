@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migratedFrom": "premium-p3-georeplica-secondary.parameters.json",
+    "_migrationDate": "2026-02-27",
+    "_sourceSkuInfo": "Premium P3 → Balanced_B20"
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "acr-test-premium-p3-geo-secondary"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "skuName": {
+      "value": "Balanced_B20"
+    },
+    "evictionPolicy": {
+      "value": "VolatileLRU"
+    },
+    "clusteringPolicy": {
+      "value": "EnterpriseCluster"
+    },
+    "rdbEnabled": {
+      "value": false
+    },
+    "rdbFrequency": {
+      "value": "1h"
+    },
+    "aofEnabled": {
+      "value": false
+    },
+    "enablePrivateEndpoint": {
+      "value": false
+    },
+    "zones": {
+      "value": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "tags": {
+      "value": {
+        "role": "geo-secondary",
+        "linkedRegion": "westus",
+        "Environment": "Test",
+        "Service": "MigrationValidation",
+        "MigratedFrom": "ACR"
+      }
+    }
+  }
+}

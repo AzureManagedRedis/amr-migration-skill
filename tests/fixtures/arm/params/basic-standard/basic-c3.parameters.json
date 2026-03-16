@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "redisCacheName": {
+      "value": "acr-test-basic-c3"
+    },
+    "location": {
+      "value": "westus2"
+    },
+    "skuName": {
+      "value": "Basic"
+    },
+    "skuFamily": {
+      "value": "C"
+    },
+    "skuCapacity": {
+      "value": 3
+    },
+    "enableNonSslPort": {
+      "value": false
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "redisVersion": {
+      "value": "6"
+    },
+    "maxmemoryPolicy": {
+      "value": "noeviction"
+    },
+    "tags": {
+      "value": {
+        "Environment": "Test",
+        "Service": "MigrationValidation"
+      }
+    }
+  }
+}

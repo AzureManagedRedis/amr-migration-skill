@@ -1,0 +1,85 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "redisCacheName": {
+      "value": "acr-test-premium-p2-all"
+    },
+    "location": {
+      "value": "westus2"
+    },
+    "skuCapacity": {
+      "value": 2
+    },
+    "enableNonSslPort": {
+      "value": false
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "redisVersion": {
+      "value": "6"
+    },
+    "shardCount": {
+      "value": 3
+    },
+    "replicasPerPrimary": {
+      "value": 2
+    },
+    "rdbBackupEnabled": {
+      "value": true
+    },
+    "rdbBackupFrequency": {
+      "value": 360
+    },
+    "subnetId": {
+      "value": ""
+    },
+    "staticIP": {
+      "value": ""
+    },
+    "maxmemoryPolicy": {
+      "value": "volatile-lfu"
+    },
+    "maxmemoryReserved": {
+      "value": "1024"
+    },
+    "maxfragmentationmemoryReserved": {
+      "value": "1024"
+    },
+    "aadEnabled": {
+      "value": true
+    },
+    "firewallRules": {
+      "value": [
+        {
+          "name": "AllowAll",
+          "startIP": "10.0.0.0",
+          "endIP": "10.0.255.255"
+        }
+      ]
+    },
+    "zones": {
+      "value": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "tags": {
+      "value": {
+        "Environment": "Test",
+        "Service": "MigrationValidation",
+        "ManagedBy": "IaC",
+        "CostCenter": "99999",
+        "HasAllFeatures": "true"
+      }
+    },
+    "persistenceStorageAccountName": {
+      "value": "acrtoamre2etest218"
+    },
+    "userAssignedManagedIdentityId": {
+      "value": "/subscriptions/fc2f20f5-602a-4ebd-97e6-4fae3f1f6424/resourcegroups/rg-acrtoamr-e2etest/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-acrtoamr-persistence"
+    }
+  }
+}

@@ -1,0 +1,343 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_description": "Azure Cache for Redis (ACR) - Premium tier ARM Template. Supports clustering, persistence, VNet, zones, geo-replication. Used as the 'before' state for AMR migration E2E tests."
+  },
+  "parameters": {
+    "redisCacheName": {
+      "type": "string",
+      "metadata": { "description": "Name of the Azure Cache for Redis instance." }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": { "description": "Azure region for the Redis cache." }
+    },
+    "skuCapacity": {
+      "type": "int",
+      "defaultValue": 2,
+      "minValue": 1,
+      "maxValue": 5,
+      "metadata": { "description": "Cache size (P1-P5)." }
+    },
+    "enableNonSslPort": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable the non-TLS port (6379)." }
+    },
+    "minimumTlsVersion": {
+      "type": "string",
+      "defaultValue": "1.2",
+      "allowedValues": ["1.0", "1.1", "1.2"],
+      "metadata": { "description": "Minimum TLS version." }
+    },
+    "redisVersion": {
+      "type": "string",
+      "defaultValue": "6",
+      "metadata": { "description": "Redis server version." }
+    },
+    "publicNetworkAccess": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": ["Enabled", "Disabled"],
+      "metadata": { "description": "Public network access." }
+    },
+    "shardCount": {
+      "type": "int",
+      "defaultValue": 0,
+      "minValue": 0,
+      "maxValue": 10,
+      "metadata": { "description": "Number of shards for clustered cache (0 = non-clustered)." }
+    },
+    "replicasPerPrimary": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "maxValue": 3,
+      "metadata": { "description": "Replicas per primary." }
+    },
+    "rdbBackupEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable RDB persistence." }
+    },
+    "rdbBackupFrequency": {
+      "type": "int",
+      "defaultValue": 60,
+      "allowedValues": [15, 30, 60, 360, 720, 1440],
+      "metadata": { "description": "RDB backup frequency in minutes." }
+    },
+    "persistenceStorageAccountName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Storage account name for persistence (used with managed identity auth)." }
+    },
+    "aofBackupEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable AOF persistence." }
+    },
+    "userAssignedManagedIdentityId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Resource ID of a user-assigned managed identity for persistence storage access." }
+    },
+    "subnetId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Subnet resource ID for VNet injection." }
+    },
+    "staticIP": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Static IP for VNet-injected cache." }
+    },
+    "maxmemoryPolicy": {
+      "type": "string",
+      "defaultValue": "volatile-lru",
+      "allowedValues": [
+        "volatile-lru", "allkeys-lru", "volatile-lfu", "allkeys-lfu",
+        "volatile-random", "allkeys-random", "volatile-ttl", "noeviction"
+      ],
+      "metadata": { "description": "Max memory eviction policy." }
+    },
+    "maxmemoryReserved": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Max memory reserved (MB) for non-cache operations." }
+    },
+    "maxfragmentationmemoryReserved": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Max fragmentation memory reserved (MB)." }
+    },
+    "aadEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": { "description": "Enable Microsoft Entra ID (AAD) authentication." }
+    },
+    "firewallRules": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": { "description": "Array of firewall rules: [{ name, startIP, endIP }]." }
+    },
+    "enablePrivateEndpoint": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Deploy a private endpoint for the cache." }
+    },
+    "privateEndpointSubnetId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Subnet resource ID for the private endpoint." }
+    },
+    "privateDnsZoneId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Private DNS Zone resource ID." }
+    },
+    "zones": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": { "description": "Availability zones." }
+    },
+    "enableGeoReplication": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable passive geo-replication by linking to another cache." }
+    },
+    "linkedCacheId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Resource ID of the cache to link for geo-replication." }
+    },
+    "linkedCacheLocation": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Location of the linked cache for geo-replication." }
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Log Analytics workspace resource ID for diagnostics." }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": { "description": "Resource tags." }
+    }
+  },
+  "variables": {
+    "baseRedisConfig": {
+      "maxmemory-policy": "[parameters('maxmemoryPolicy')]",
+      "aad-enabled": "[if(parameters('aadEnabled'), 'true', 'false')]"
+    },
+    "reservedConfig": "[if(not(empty(parameters('maxmemoryReserved'))), createObject('maxmemory-reserved', parameters('maxmemoryReserved')), createObject())]",
+    "fragConfig": "[if(not(empty(parameters('maxfragmentationmemoryReserved'))), createObject('maxfragmentationmemory-reserved', parameters('maxfragmentationmemoryReserved')), createObject())]",
+    "rdbConfig": "[if(parameters('rdbBackupEnabled'), createObject('rdb-backup-enabled', 'true', 'rdb-backup-frequency', string(parameters('rdbBackupFrequency')), 'rdb-storage-connection-string', concat('https://', parameters('persistenceStorageAccountName'), '.blob.core.windows.net'), 'preferred-data-persistence-auth-method', 'ManagedIdentity', 'storage-subscription-id', subscription().subscriptionId), createObject())]",
+    "aofConfig": "[if(parameters('aofBackupEnabled'), createObject('aof-backup-enabled', 'true', 'aof-storage-connection-string-0', concat('https://', parameters('persistenceStorageAccountName'), '.blob.core.windows.net'), 'preferred-data-persistence-auth-method', 'ManagedIdentity', 'storage-subscription-id', subscription().subscriptionId), createObject())]",
+    "redisConfiguration": "[union(variables('baseRedisConfig'), variables('reservedConfig'), variables('fragConfig'), variables('rdbConfig'), variables('aofConfig'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "zones": "[if(not(empty(parameters('zones'))), parameters('zones'), createArray())]",
+      "identity": "[if(not(empty(parameters('userAssignedManagedIdentityId'))), createObject('type', 'SystemAssigned, UserAssigned', 'userAssignedIdentities', createObject(parameters('userAssignedManagedIdentityId'), createObject())), createObject('type', 'SystemAssigned'))]",
+      "properties": {
+        "enableNonSslPort": "[parameters('enableNonSslPort')]",
+        "minimumTlsVersion": "[parameters('minimumTlsVersion')]",
+        "redisVersion": "[parameters('redisVersion')]",
+        "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
+        "sku": {
+          "name": "Premium",
+          "family": "P",
+          "capacity": "[parameters('skuCapacity')]"
+        },
+        "redisConfiguration": "[variables('redisConfiguration')]",
+        "shardCount": "[if(greater(parameters('shardCount'), 0), parameters('shardCount'), json('null'))]",
+        "replicasPerPrimary": "[parameters('replicasPerPrimary')]",
+        "subnetId": "[if(not(empty(parameters('subnetId'))), parameters('subnetId'), json('null'))]",
+        "staticIP": "[if(not(empty(parameters('staticIP'))), parameters('staticIP'), json('null'))]"
+      }
+    },
+    {
+      "copy": {
+        "name": "firewallRuleCopy",
+        "count": "[length(parameters('firewallRules'))]"
+      },
+      "type": "Microsoft.Cache/redis/firewallRules",
+      "apiVersion": "2024-03-01",
+      "name": "[concat(parameters('redisCacheName'), '/', parameters('firewallRules')[copyIndex()].name)]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "startIP": "[parameters('firewallRules')[copyIndex()].startIP]",
+        "endIP": "[parameters('firewallRules')[copyIndex()].endIP]"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redis/patchSchedules",
+      "apiVersion": "2024-03-01",
+      "name": "[concat(parameters('redisCacheName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "scheduleEntries": [
+          {
+            "dayOfWeek": "Sunday",
+            "startHourUtc": 2,
+            "maintenanceWindow": "PT5H"
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[and(parameters('enableGeoReplication'), not(empty(parameters('linkedCacheId'))))]",
+      "type": "Microsoft.Cache/redis/linkedServers",
+      "apiVersion": "2024-03-01",
+      "name": "[concat(parameters('redisCacheName'), '/linkedServer')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "linkedRedisCacheId": "[parameters('linkedCacheId')]",
+        "linkedRedisCacheLocation": "[parameters('linkedCacheLocation')]",
+        "serverRole": "Secondary"
+      }
+    },
+    {
+      "condition": "[and(parameters('enablePrivateEndpoint'), not(empty(parameters('privateEndpointSubnetId'))))]",
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('redisCacheName'), '-pe')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "subnet": {
+          "id": "[parameters('privateEndpointSubnetId')]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "[concat(parameters('redisCacheName'), '-pe-conn')]",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]",
+              "groupIds": ["redisCache"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[and(parameters('enablePrivateEndpoint'), not(empty(parameters('privateDnsZoneId'))))]",
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('redisCacheName'), '-pe/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', concat(parameters('redisCacheName'), '-pe'))]"
+      ],
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "privatelink-redis-cache-windows-net",
+            "properties": {
+              "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('logAnalyticsWorkspaceId')))]",
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "name": "[concat(parameters('redisCacheName'), '-diag')]",
+      "scope": "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+        "metrics": [
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
+        ],
+        "logs": [
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+    },
+    "cacheHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))).hostName]"
+    },
+    "cacheSslPort": {
+      "type": "int",
+      "value": "[reference(resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))).sslPort]"
+    },
+    "cacheName": {
+      "type": "string",
+      "value": "[parameters('redisCacheName')]"
+    }
+  }
+}

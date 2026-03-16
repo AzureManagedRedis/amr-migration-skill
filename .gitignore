@@ -1,0 +1,10 @@
+# Visual Studio
+.vs/
+
+# PowerShell
+*.psm1.bak
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -3,7 +3,8 @@ name: amr-migration-skill
 description: |
   Helps users migrate from Azure Cache for Redis (ACR) to Azure Managed Redis (AMR).
   Use when users ask about: Redis migration, AMR vs ACR features, SKU selection, 
-  migration best practices, feature compatibility, or Azure Redis cache upgrades.
+  migration best practices, feature compatibility, Azure Redis cache upgrades,
+  or IaC template migration (ARM, Bicep, Terraform).
 ---
 
 # Azure Managed Redis Migration Skill
@@ -41,12 +42,7 @@ Respond with:
 
 ## When to Use This Skill
 
-Activate this skill when the user:
-- Asks about migrating from Azure Cache for Redis to Azure Managed Redis
-- Wants to compare ACR features with AMR features
-- Needs help selecting the right AMR SKU for their workload
-- Has questions about feature compatibility between ACR and AMR
-- Wants to understand migration best practices and considerations
+Activate when the user asks about ACR → AMR migration, SKU selection, feature comparison, or IaC template conversion (Bicep/ARM/Terraform). See **Workflow Selection** below to determine which workflow to follow.
 
 ## Available Resources
 
@@ -120,29 +116,76 @@ See [Migration Overview](references/migration-overview.md) for detailed migratio
 - Connection string changes
 - Clustering policy and network isolation considerations
 
+### Infrastructure-as-Code (IaC) Migration
+See [IaC Migration Guide](iac/references/iac-migration.md) for complete transformation rules to convert ACR Bicep/ARM templates to AMR, including:
+- Resource type transformation (`Microsoft.Cache/redis` → `Microsoft.Cache/redisEnterprise` cluster + database)
+- SKU format conversion (ACR `name`/`family`/`capacity` → AMR compound name like `Balanced_B10`)
+- Property-by-property mapping with eviction policy, persistence, and clustering transformations
+- VNet injection → Private Endpoint conversion
+- Pricing comparison and customer confirmation workflow
+- Complete transformation checklist
+
+### IaC Migration Validation
+See [IaC Validation Guide](iac/references/iac-validation.md) for details. Use `iac/Validate-Migration.ps1` to deploy and validate migrated templates automatically.
+
+### Shared Module: AmrMigrationHelpers.ps1
+All AMR SKU specifications, pricing lookups, and node count calculations are centralized in `scripts/AmrMigrationHelpers.ps1`. This module is dot-sourced by both `Convert-AcrToAmr.ps1` and `get_redis_price.ps1` to avoid data duplication.
+
+**Exported functions**:
+- `Get-AmrSkuSizes -TierPrefix <Balanced|MemoryOptimized|ComputeOptimized|FlashOptimized>` — Returns ordered size→specs dictionary for a tier
+- `Get-RetailPrice -SkuName <name> -Region <region> [-Currency <code>]` — Azure Retail Prices API lookup
+- `Get-CacheNodeCount -Tier <tier> [-ShardCount <n>] [-ReplicasPerPrimary <n>] [-HA <bool>]` — Node count for ACR/AMR
+- `Get-MetricsBasedSkuSuggestion -Metrics <obj> -SourceConfig <obj>` — Metrics-driven AMR SKU recommendation
+
+## Workflow Selection
+
+**Choose the correct workflow based on the user's intent.** The two workflows are independent — do not mix their steps.
+
+| User Intent | Signal Phrases | Workflow |
+|---|---|---|
+| Move a live cache to AMR | "migrate cache", "move to AMR", "select SKU", "assess metrics", "migration strategy", "switch traffic" | **Migration Workflow** (Steps 1-4) |
+| Convert IaC templates to AMR format | "convert template", "Bicep migration", "ARM to AMR", "Terraform", "IaC", "template transformation", "region buildout" | **IaC Migration Workflow** (Steps 1-9) |
+| Compare features or answer general questions | "compare ACR vs AMR", "feature compatibility", "retirement date", "best practices" | Answer directly using reference docs — no workflow needed |
+
+### Ambiguous Requests
+
+If the user's intent is unclear (e.g., "help me migrate to AMR" could mean either), ask:
+
+> "Are you looking to **migrate a live cache** (data migration, SKU selection, traffic cutover) or **convert your infrastructure-as-code templates** (Bicep/ARM/Terraform) to AMR format? Or both?"
+
+### Both Workflows
+
+If the user needs both (e.g., "migrate everything including our IaC"):
+1. Run **Migration Workflow** first — this determines the target AMR SKU and validates sizing with metrics
+2. Then run **IaC Migration Workflow** — using the SKU selected in step 1 as the target
+
+---
+
 ## Migration Workflow
 
 ### Step 1: Assess Current Cache
-Gather metrics from the existing ACR cache to inform SKU selection:
-
-```powershell
-# Windows PowerShell
-.\scripts\get_acr_metrics.ps1 -SubscriptionId <id> -ResourceGroup <rg> -CacheName <name>
-.\scripts\get_acr_metrics.ps1 -SubscriptionId <id> -ResourceGroup <rg> -CacheName <name> -Days 7
-
-# Linux/Mac bash
-./scripts/get_acr_metrics.sh <subscriptionId> <resourceGroup> <cacheName>
-./scripts/get_acr_metrics.sh <subscriptionId> <resourceGroup> <cacheName> 7
-```
-
-Also retrieve the actual memory reservation to determine true usable capacity (defaults in the SKU mapping tables assume ~20%):
+First, retrieve cache properties to discover the SKU, tier, shard count, and memory reservation:
 
 ```bash
 az redis show -n <cache-name> -g <resource-group> -o json \
-  --query "{maxfragmentationmemoryReserved: redisConfiguration.maxfragmentationmemoryReserved, maxmemoryReserved: redisConfiguration.maxmemoryReserved}"
+  --query "{sku: sku.name, tier: sku.family, capacity: sku.capacity, shardCount: shardCount, maxfragmentationmemoryReserved: redisConfiguration.maxfragmentationmemoryReserved, maxmemoryReserved: redisConfiguration.maxmemoryReserved}"
 ```
 
-Both values are in MB. **Actual Usable = SKU Capacity − (maxmemoryReserved + maxfragmentationmemoryReserved)**. Use this as the source of truth for sizing.
+Memory reservation values are in MB. **Actual Usable = SKU Capacity − (maxmemoryReserved + maxfragmentationmemoryReserved)**. Use this as the source of truth for sizing (defaults in the SKU mapping tables assume ~20%).
+
+Then gather metrics using the discovered SKU/tier. Include `-SourceSku` and `-SourceTier` to get an automated AMR SKU recommendation:
+
+```powershell
+# Windows PowerShell (with SKU recommendation — use values from az redis show)
+.\scripts\get_acr_metrics.ps1 -SubscriptionId <id> -ResourceGroup <rg> -CacheName <name> -SourceSku <sku> -SourceTier <tier> [-ShardCount <n>]
+
+# Metrics only (no recommendation)
+.\scripts\get_acr_metrics.ps1 -SubscriptionId <id> -ResourceGroup <rg> -CacheName <name>
+
+# Linux/Mac bash (metrics only — recommendation requires PowerShell)
+./scripts/get_acr_metrics.sh <subscriptionId> <resourceGroup> <cacheName>
+./scripts/get_acr_metrics.sh <subscriptionId> <resourceGroup> <cacheName> 7
+```
 
 **Requires**: Azure CLI logged in (`az login`)
 
@@ -154,24 +197,37 @@ Both values are in MB. **Actual Usable = SKU Capacity − (maxmemoryReserved + m
 - Connected Clients
 - Network Bandwidth — Cache Read and Cache Write (bytes/sec)
 
-Use these values to:
+> **SKU Recommendation**: When `-SourceSku` and `-SourceTier` are provided, the script automatically runs the metrics-based decision matrix and outputs a concrete AMR SKU recommendation with confidence level and reasoning. Use this as the primary input for Step 2.
+
+### Step 2: Select Target AMR SKU
+Using the metrics from Step 1:
 1. Size the target AMR SKU (usable memory ≥ peak used memory — no extra buffer needed with an eviction policy)
 2. Choose tier (high Server Load + low memory → Compute Optimized X-series)
 3. Verify connection limits are sufficient
 4. Use P95 values to distinguish sustained load from occasional spikes
 
-### Step 2: Select Target AMR SKU
-1. Refer to the [SKU Mapping Guide](references/sku-mapping.md)
-2. Use metrics from Step 1 to validate sizing
-3. Get pricing for candidate SKUs:
-   ```powershell
-   .\scripts\get_redis_price.ps1 -SKU M20 -Region westus2
-   .\scripts\get_redis_price.ps1 -SKU B20 -Region westus2
-   ```
+If Step 1 produced a **metrics-based SKU recommendation**, use it as the starting point and cross-reference with the [SKU Mapping Guide](references/sku-mapping.md) table-based mapping for validation.
+
+Get pricing for the recommended SKU and alternatives:
+```powershell
+.\scripts\get_redis_price.ps1 -SKU <recommended-sku> -Region <region>
+.\scripts\get_redis_price.ps1 -SKU <alternative-sku> -Region <region>
+```
+
+If the metrics-based and guide-based recommendations differ:
+   - **High/Medium confidence**: prefer the metrics-based recommendation (it uses actual workload data)
+   - **Low confidence**: prefer the **guide-based mapping** from [SKU Mapping Guide](references/sku-mapping.md) — the metrics function defaults to Balanced when it cannot clearly classify the workload
+
+> **Inconclusive Metrics**: If the metrics data is unreliable, fall back to the **guide-based mapping** from [SKU Mapping Guide](references/sku-mapping.md) and flag the uncertainty to the user. Metrics are considered inconclusive when:
+> - **High variance**: P95 is >3× the average (indicates bursty workload — size for P95 but mention the spike pattern)
+> - **Missing data**: No Used Memory RSS or Server Load data (e.g., cache was recently created, metrics not yet available)
+> - **Confidence = None**: The metrics script returned a `None` confidence level (insufficient data for a recommendation)
+>
+> In these cases, say: *"Metrics data was insufficient for a confident recommendation. I'm using the standard SKU mapping based on your current cache size. Consider re-running the assessment after 7 days of representative workload."*
 
 ### Step 3: Plan Migration
 1. Determine migration strategy (dual-write, snapshot/restore, etc.)
-2. **Clustering policy**: For non-clustered ACR caches (Basic, Standard, non-clustered Premium), create the AMR cache with **Enterprise clustering policy** to avoid client application changes. OSS clustering policy exposes cluster topology and may require a cluster-aware client.
+2. **Clustering policy**: Use **OSS clustering policy** (recommended) for best throughput and lowest latency — most modern Redis clients support it. Use **Enterprise clustering policy** only if your client library doesn't support Redis Cluster API, or **Non-Clustered** for caches ≤25 GB that use extensive cross-slot commands.
 3. **Network isolation**: ACR caches using VNet injection must be replaced with **Private Link** on AMR, as AMR does not support VNet injection. Ensure Private Endpoints are configured before cutover.
 4. Plan for potential downtime or data sync requirements
 5. Update application connection strings and configuration
@@ -181,6 +237,40 @@ Use these values to:
 2. Migrate data using appropriate method
 3. Validate data integrity
 4. Switch application traffic to new cache
+
+## IaC Migration Workflow
+
+Use this workflow when the user asks to convert ACR Bicep/ARM templates to AMR. See [IaC Migration Guide](iac/references/iac-migration.md) for detailed transformation rules.
+
+> **Critical**: Do NOT skip the customer confirmation gate (Step 5). Always present pricing and feature gaps before transforming templates.
+
+### Steps 1-4: Analyze
+```powershell
+# With separate parameters file
+$analysis = .\iac\Convert-AcrToAmr.ps1 `
+    -TemplatePath $path [-ParametersPath $paramsPath] -Region $region `
+    -AnalyzeOnly -ReturnObject
+```
+
+### Step 5: Customer Confirmation Gate
+**STOP.** Present `$analysis` data to the customer:
+- **AMR SKU**: `$analysis.TargetSku.Name` — **Pricing**: `$analysis.Pricing.SourceMonthly` vs `.TargetMonthly` — **Gaps**: `$analysis.FeatureGaps`
+
+**Wait for explicit confirmation before proceeding.**
+
+### Steps 6-7: Transform
+```powershell
+$result = .\iac\Convert-AcrToAmr.ps1 `
+    -TemplatePath $path [-ParametersPath $paramsPath] -Region $region `
+    -Force -ReturnObject
+```
+Outputs to `migrated/` subfolder: `<source-name>.amr.<ext>`, parameters file (if applicable), migration report.
+
+### Step 8: Post-Migration Summary
+Present `$result.MigrationReport`: AMR SKU, monthly cost, endpoint (`<name>.<region>.redis.azure.net:10000`), features available/removed, output files.
+
+### Step 9: Validate (Optional)
+Offer to validate the migrated template via test deployment. See [IaC Validation Guide](iac/references/iac-validation.md) for the validation script.
 
 ## Common Questions
 

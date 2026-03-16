@@ -1,0 +1,79 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "redisCacheName": {
+      "value": "myapp-redis-prod-westus2"
+    },
+    "location": {
+      "value": "westus2"
+    },
+    "skuName": {
+      "value": "Premium"
+    },
+    "skuFamily": {
+      "value": "P"
+    },
+    "skuCapacity": {
+      "value": 2
+    },
+    "enableNonSslPort": {
+      "value": false
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "publicNetworkAccess": {
+      "value": "Enabled"
+    },
+    "shardCount": {
+      "value": 3
+    },
+    "replicasPerPrimary": {
+      "value": 1
+    },
+    "rdbBackupEnabled": {
+      "value": true
+    },
+    "rdbBackupFrequency": {
+      "value": 60
+    },
+    "rdbStorageConnectionString": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/{rg}/providers/Microsoft.KeyVault/vaults/{vault-name}"
+        },
+        "secretName": "rdb-storage-connection-string"
+      }
+    },
+    "maxmemoryPolicy": {
+      "value": "volatile-lru"
+    },
+    "maxmemoryReserved": {
+      "value": "642"
+    },
+    "maxfragmentationmemoryReserved": {
+      "value": "642"
+    },
+    "aadEnabled": {
+      "value": true
+    },
+    "firewallRules": {
+      "value": [
+        { "name": "AllowAppSubnet", "startIP": "10.0.1.0", "endIP": "10.0.1.255" },
+        { "name": "AllowMonitoring", "startIP": "10.0.5.0", "endIP": "10.0.5.255" }
+      ]
+    },
+    "zones": {
+      "value": ["1", "2", "3"]
+    },
+    "tags": {
+      "value": {
+        "Environment": "Production",
+        "Service": "MyApp",
+        "ManagedBy": "EV2",
+        "CostCenter": "12345"
+      }
+    }
+  }
+}

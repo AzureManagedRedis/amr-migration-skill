@@ -1,0 +1,215 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_description": "Azure Managed Redis (AMR) - ARM Template. Migrated from Azure Cache for Redis (ACR) Premium P2 clustered.",
+    "_migratedFrom": "acr-cache.json"
+  },
+  "parameters": {
+    "redisCacheName": {
+      "type": "string",
+      "metadata": { "description": "Name of the Azure Managed Redis instance." }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": { "description": "Azure region for the Redis cache." }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "Balanced_B50",
+      "metadata": { "description": "AMR SKU name (e.g., Balanced_B50, MemoryOptimized_M50)." }
+    },
+    "minimumTlsVersion": {
+      "type": "string",
+      "defaultValue": "1.2",
+      "allowedValues": ["1.0", "1.1", "1.2"],
+      "metadata": { "description": "Minimum TLS version." }
+    },
+    "evictionPolicy": {
+      "type": "string",
+      "defaultValue": "VolatileLRU",
+      "allowedValues": [
+        "VolatileLRU", "AllKeysLRU", "VolatileLFU", "AllKeysLFU",
+        "VolatileRandom", "AllKeysRandom", "VolatileTTL", "NoEviction"
+      ],
+      "metadata": { "description": "Eviction policy for the database." }
+    },
+    "clusteringPolicy": {
+      "type": "string",
+      "defaultValue": "EnterpriseCluster",
+      "allowedValues": ["EnterpriseCluster", "OSSCluster"],
+      "metadata": { "description": "Clustering policy. Use EnterpriseCluster for single-endpoint behavior (recommended)." }
+    },
+    "rdbEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable RDB persistence (managed by AMR, no storage account needed)." }
+    },
+    "rdbFrequency": {
+      "type": "string",
+      "defaultValue": "1h",
+      "allowedValues": ["1h", "6h", "12h"],
+      "metadata": { "description": "RDB backup frequency." }
+    },
+    "aofEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable AOF persistence (managed by AMR, no storage account needed)." }
+    },
+    "enablePrivateEndpoint": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Deploy a private endpoint for the cache." }
+    },
+    "privateEndpointSubnetId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Subnet resource ID for the private endpoint." }
+    },
+    "privateDnsZoneId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Private DNS Zone resource ID (use privatelink.redisenterprise.cache.azure.net)." }
+    },
+    "zones": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": { "description": "Availability zones." }
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Log Analytics workspace resource ID for diagnostics." }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": { "description": "Resource tags." }
+    }
+  },
+  "variables": {
+    "persistenceConfig": "[if(or(parameters('rdbEnabled'), parameters('aofEnabled')), createObject('rdbEnabled', parameters('rdbEnabled'), 'rdbFrequency', if(parameters('rdbEnabled'), parameters('rdbFrequency'), json('null')), 'aofEnabled', parameters('aofEnabled')), json('null'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2024-09-01-preview",
+      "name": "[parameters('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "[parameters('skuName')]"
+      },
+      "zones": "[if(not(empty(parameters('zones'))), parameters('zones'), createArray())]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "minimumTlsVersion": "[parameters('minimumTlsVersion')]"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2024-09-01-preview",
+      "name": "[concat(parameters('redisCacheName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "port": 10000,
+        "clientProtocol": "Encrypted",
+        "clusteringPolicy": "[parameters('clusteringPolicy')]",
+        "evictionPolicy": "[parameters('evictionPolicy')]",
+        "persistence": "[variables('persistenceConfig')]"
+      }
+    },
+    {
+      "condition": "[and(parameters('enablePrivateEndpoint'), not(empty(parameters('privateEndpointSubnetId'))))]",
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('redisCacheName'), '-pe')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "subnet": {
+          "id": "[parameters('privateEndpointSubnetId')]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "[concat(parameters('redisCacheName'), '-pe-conn')]",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]",
+              "groupIds": ["redisEnterprise"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[and(parameters('enablePrivateEndpoint'), not(empty(parameters('privateDnsZoneId'))))]",
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('redisCacheName'), '-pe/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', concat(parameters('redisCacheName'), '-pe'))]"
+      ],
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "privatelink-redisenterprise-cache-azure-net",
+            "properties": {
+              "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('logAnalyticsWorkspaceId')))]",
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "name": "[concat(parameters('redisCacheName'), '-diag')]",
+      "scope": "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+        "metrics": [
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
+        ],
+        "logs": [
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]"
+    },
+    "cacheHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))).hostName]"
+    },
+    "cachePort": {
+      "type": "int",
+      "value": 10000
+    },
+    "cacheName": {
+      "type": "string",
+      "value": "[parameters('redisCacheName')]"
+    }
+  }
+}

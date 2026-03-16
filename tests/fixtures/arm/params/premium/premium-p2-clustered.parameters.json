@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "redisCacheName": {
+      "value": "acr-test-premium-p2-clustered"
+    },
+    "location": {
+      "value": "westus2"
+    },
+    "skuCapacity": {
+      "value": 2
+    },
+    "enableNonSslPort": {
+      "value": false
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "redisVersion": {
+      "value": "6"
+    },
+    "shardCount": {
+      "value": 3
+    },
+    "rdbBackupEnabled": {
+      "value": true
+    },
+    "rdbBackupFrequency": {
+      "value": 60
+    },
+    "maxmemoryPolicy": {
+      "value": "volatile-lru"
+    },
+    "maxmemoryReserved": {
+      "value": "642"
+    },
+    "maxfragmentationmemoryReserved": {
+      "value": "642"
+    },
+    "aadEnabled": {
+      "value": true
+    },
+    "zones": {
+      "value": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "tags": {
+      "value": {
+        "Environment": "Test",
+        "Service": "MigrationValidation"
+      }
+    },
+    "persistenceStorageAccountName": {
+      "value": "acrtoamre2etest218"
+    },
+    "userAssignedManagedIdentityId": {
+      "value": "/subscriptions/fc2f20f5-602a-4ebd-97e6-4fae3f1f6424/resourcegroups/rg-acrtoamr-e2etest/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-acrtoamr-persistence"
+    }
+  }
+}

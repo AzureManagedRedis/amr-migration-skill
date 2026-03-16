@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migratedFrom": "acr-cache.parameters.json",
+    "_migrationDate": "2026-02-28",
+    "_sourceSkuInfo": "Premium P2 x 3 shards → Balanced_B50"
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "myapp-redis-prod-westus2"
+    },
+    "location": {
+      "value": "westus2"
+    },
+    "skuName": {
+      "value": "Balanced_B50"
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "evictionPolicy": {
+      "value": "VolatileLRU"
+    },
+    "clusteringPolicy": {
+      "value": "EnterpriseCluster"
+    },
+    "rdbEnabled": {
+      "value": true
+    },
+    "rdbFrequency": {
+      "value": "1h"
+    },
+    "aofEnabled": {
+      "value": false
+    },
+    "zones": {
+      "value": ["1", "2", "3"]
+    },
+    "tags": {
+      "value": {
+        "Environment": "Production",
+        "Service": "MyApp",
+        "ManagedBy": "EV2",
+        "CostCenter": "12345"
+      }
+    }
+  }
+}
