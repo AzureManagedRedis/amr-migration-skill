@@ -31,6 +31,16 @@ Avoid using the term "shards" when describing AMR. In AMR, sharding is managed i
 
 ## Agent Guidance
 
+### Version Check (manual only — triggered by user request)
+Do **not** check for updates automatically. Only perform a version check when the user explicitly asks (e.g., "check for updates for the amr skill", "is there a newer version of amr-migration-skill?").
+
+When requested:
+1. Read the local `VERSION` file in this skill's root directory.
+2. Fetch the remote version from: `https://raw.githubusercontent.com/AzureManagedRedis/amr-migration-skill/main/VERSION`
+3. If the remote version is newer, tell the user: _"A newer version of the AMR Migration Skill is available (local: X, latest: Y). Update from: https://github.com/AzureManagedRedis/amr-migration-skill"_
+4. If versions match, tell the user: _"You're on the latest version (X)."_
+5. If the fetch fails, tell the user the check failed and suggest trying again later.
+
 ### Detecting Platform for Script Selection
 Check the user's OS to choose the right migration script variant:
 - **Windows / PowerShell**: Use `.ps1` scripts (requires Az PowerShell module)
