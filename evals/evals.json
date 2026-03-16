@@ -4,14 +4,20 @@
     {
       "id": 1,
       "prompt": "We have an Azure Cache for Redis Standard C3 in westus2 that's using about 8GB of memory with moderate server load (~40%). We need to migrate to Azure Managed Redis. What AMR SKU should we pick, and can you give me a cost comparison?",
-      "expected_output": "Recommends an appropriate AMR SKU (M20 or B10 range) based on the C3's ~13GB capacity and 8GB usage. Uses the pricing script to look up costs rather than guessing. Mentions connection string changes (port 10000 vs 6380). Does not use the term 'shards' for AMR.",
+      "expected_output": "Recommends an appropriate AMR SKU (M20 or B10 range) based on the C3's ~13GB capacity and 8GB usage. Output includes specific hourly and monthly pricing for both the source C3 Standard and the recommended AMR SKU, with a side-by-side cost comparison. Mentions connection string changes (port 10000 vs 6380) and the retirement deadline. Does not use the term 'shards' for AMR.",
       "files": [],
       "expectations": [
         "Recommends a specific AMR SKU name (e.g., M20, B10, or similar) rather than just saying 'pick an M-series'",
-        "References or attempts to use the get_redis_price script for pricing data",
+        "Output includes specific hourly and monthly pricing for the source C3 Standard SKU (not fabricated round numbers)",
+        "Output includes specific hourly and monthly pricing for the recommended AMR SKU (not fabricated round numbers)",
+        "Monthly cost figures are mathematically consistent with hourly rate multiplied by approximately 730 hours multiplied by node count (within $1 rounding tolerance)",
+        "Output includes monthly cost figures with dollar amounts (e.g., $XX.XX/month) for both source and target",
+        "Presents a cost comparison showing both the current ACR cost and the recommended AMR cost — not just the AMR price in isolation",
+        "Recommended AMR SKU has enough usable memory for the 8GB workload without being more than 3x oversized",
         "Mentions the TLS port change from 6380 to 10000",
         "Does not use the word 'shards' when describing the AMR target",
-        "Mentions or references the SKU mapping guide"
+        "Mentions or references the SKU mapping guide",
+        "Mentions the ACR Basic/Standard/Premium retirement date (September 30, 2028)"
       ]
     },
     {
@@ -50,6 +56,22 @@
         "Identifies private endpoints as a blocker for automated migration",
         "Suggests a manual migration strategy as an alternative",
         "Mentions that AMR uses Private Link instead of VNet injection"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Pull the metrics from my ACR cache and recommend an AMR SKU based on the results. Use the sample_cache config from eval-config.json if available. If the sample cache details are still placeholders (contain '<YOUR_'), ask me for my subscription ID, resource group, and cache name before proceeding.",
+      "prompt_note": "This eval requires a real Azure cache. Configure sample_cache in eval-config.json with real values, or the agent will prompt for them interactively. The agent should run the get_acr_metrics script, parse the output, and use the metrics to make a concrete SKU recommendation.",
+      "expected_output": "Runs the get_acr_metrics script against the provided cache. Output includes Used Memory RSS, Server Load, Connected Clients, and Network Bandwidth with Peak/P95/Average aggregations. Numeric values are within sane ranges. Produces a specific AMR SKU recommendation based on the fetched metrics, referencing the SKU mapping guide.",
+      "files": [],
+      "expectations": [
+        "Runs or attempts to run the get_acr_metrics script (not a custom API call or fabricated data)",
+        "If sample_cache values are placeholders, asks the user for cache details before running the script",
+        "Output includes metric names: Used Memory RSS, Server Load, Connected Clients, and Cache Read/Write (or Network Bandwidth)",
+        "Output includes all three aggregation types: Peak, P95, and Average",
+        "Numeric values are sane: memory > 0, server load between 0-100%, connected clients >= 0, bandwidth >= 0",
+        "Produces a specific AMR SKU recommendation (e.g., M20, B10, X10) — not a generic 'pick an M-series'",
+        "References the SKU mapping guide or AMR SKU specs when making the recommendation"
       ]
     }
   ]

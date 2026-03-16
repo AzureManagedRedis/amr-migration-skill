@@ -30,6 +30,30 @@
     "retirement_dates": {
       "basic_standard_premium": "September 30, 2028",
       "enterprise_enterprise_flash": "March 31, 2027"
+    },
+    "metrics_eval_guidance": {
+      "expected_metric_names": ["Used Memory RSS", "Server Load", "Connected Clients", "Cache Read", "Cache Write"],
+      "expected_aggregations": ["Peak", "P95", "Average"],
+      "sanity_checks": {
+        "memory_bytes": "> 0",
+        "server_load_percent": "0 to 100",
+        "connected_clients": ">= 0",
+        "bandwidth_bytes_per_sec": ">= 0"
+      },
+      "must_produce_sku_recommendation": true
+    },
+    "pricing_eval_guidance": {
+      "must_price_source_and_target": true,
+      "expected_format": "monthly cost in currency (e.g., $XX.XX/month)",
+      "source_sku": "C3 Standard",
+      "note": "Pricing scripts call the public Azure Retail Prices API — no auth required"
     }
+  },
+  "sample_cache": {
+    "_comment": "Fill in with a real ACR cache to enable the metrics eval (id 5). If left as placeholders, the eval will prompt the user for cache details at runtime.",
+    "subscription_id": "<YOUR_SUBSCRIPTION_ID>",
+    "resource_group": "<YOUR_RESOURCE_GROUP>",
+    "cache_name": "<YOUR_CACHE_NAME>",
+    "region": "<YOUR_REGION>"
   }
 }
