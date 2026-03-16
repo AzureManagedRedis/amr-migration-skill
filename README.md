@@ -71,8 +71,29 @@ You should see `Source: Personal` and the location pointing to `~/.copilot/skill
 
 ### With Claude Code
 
+Clone the repo and copy the skill into Claude Code's skills directory:
+
+```bash
+git clone https://github.com/AzureManagedRedis/amr-migration-skill
 ```
-# Add to your agent skills directory
+
+**Personal (global) skill** — available in all projects:
+
+```bash
+mkdir -p ~/.claude/skills/amr-migration-skill
+cp -r ./amr-migration-skill/* ~/.claude/skills/amr-migration-skill/
+```
+
+**Project-scoped skill** — available only in a specific repo:
+
+```bash
+mkdir -p .claude/skills/amr-migration-skill
+cp -r ./amr-migration-skill/* .claude/skills/amr-migration-skill/
+```
+
+Restart Claude Code, then verify the skill is loaded by asking:
+```
+Is the amr-migration-skill loaded?
 ```
 
 ## Example Prompts
