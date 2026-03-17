@@ -1,14 +1,49 @@
 ---
 name: amr-migration-skill
 description: |
-  Helps users migrate from Azure Cache for Redis (ACR) to Azure Managed Redis (AMR).
-  Use when users ask about: Redis migration, AMR vs ACR features, SKU selection, 
-  migration best practices, feature compatibility, or Azure Redis cache upgrades.
+  Helps users migrate to Azure Managed Redis (AMR) from either:
+  (1) Azure Cache for Redis (ACR) Basic/Standard/Premium tiers, or
+  (2) Azure Cache for Redis Enterprise (ACRE) Enterprise/Enterprise Flash tiers.
+  Use when users ask about: Redis migration, AMR vs ACR/ACRE features, SKU selection, 
+  migration best practices, feature compatibility, Azure Redis cache upgrades,
+  ACRE automation script updates (ARM, Bicep, CLI, PowerShell), or interactive
+  ACRE cache migration with step-by-step guidance.
 ---
 
 # Azure Managed Redis Migration Skill
 
-This skill assists users in migrating from Azure Cache for Redis (ACR) Basic/Standard/Premium tiers to Azure Managed Redis (AMR).
+This skill assists users in migrating to Azure Managed Redis (AMR) from two source products:
+
+- **ACR → AMR**: Azure Cache for Redis Basic/Standard/Premium (`Microsoft.Cache/redis`) — covered by this file and `references/`
+- **ACRE → AMR**: Azure Cache for Redis Enterprise (`Microsoft.Cache/redisEnterprise`) — covered by [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md) and `acre-to-amr/references/`
+
+These are **completely different migration paths** with different resource types, properties, SKU mappings, and strategies. **Always use the correct set of files.**
+
+---
+
+## ⚠️ Source Product Routing — READ FIRST
+
+Before proceeding, determine whether the user is migrating from **ACR** or **ACRE**:
+
+| Signal | Source Product | Files to Use |
+|--------|---------------|-------------|
+| Resource type `Microsoft.Cache/redis` | **ACR** | This file + `references/` |
+| SKUs: `Basic`, `Standard`, `Premium`, `C0`–`C6`, `P1`–`P5` | **ACR** | This file + `references/` |
+| CLI: `az redis` commands | **ACR** | This file + `references/` |
+| PowerShell: `New-AzRedisCache`, `Get-AzRedisCache` | **ACR** | This file + `references/` |
+| Resource type `Microsoft.Cache/redisEnterprise` | **ACRE** | [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md) + `acre-to-amr/references/` |
+| SKUs: `Enterprise_*`, `EnterpriseFlash_*` | **ACRE** | [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md) + `acre-to-amr/references/` |
+| CLI: `az redisenterprise` commands | **ACRE** | [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md) + `acre-to-amr/references/` |
+| PowerShell: `*-AzRedisEnterprise*` cmdlets | **ACRE** | [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md) + `acre-to-amr/references/` |
+| User mentions "Enterprise", "Enterprise Flash", "ACRE" | **ACRE** | [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md) + `acre-to-amr/references/` |
+
+> **CRITICAL**: When the user's context is ACRE (Enterprise), switch entirely to [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md) and follow its rules, modes, and reference files. Do NOT mix files from `references/` (ACR content) with files from `acre-to-amr/references/` (ACRE content). These are isolated migration paths — using the wrong files will produce incorrect guidance.
+
+---
+
+**Everything below this line applies to ACR → AMR migration only (Basic/Standard/Premium).**
+
+---
 
 ## 📝 Terminology Note
 
@@ -19,19 +54,25 @@ Users may refer to Azure Cache for Redis by several names:
 
 These all refer to the same product: **Azure Cache for Redis**. Treat these terms interchangeably when users ask about migration.
 
-## ⚠️ Scope Limitation: Enterprise Tier NOT Supported
+## ⚠️ Enterprise Tier — Use ACRE Skill
 
-**This skill does NOT cover Azure Cache for Redis Enterprise (ACRE) migrations.**
+**If users ask about migrating from Azure Cache for Redis Enterprise (ACRE) or Enterprise Flash**, redirect to the dedicated ACRE → AMR migration skill:
 
-If users ask about migrating from:
-- Azure Cache for Redis **Enterprise** tier
-- Azure Cache for Redis **Enterprise Flash** tier
+> "Enterprise tier migration is covered by the dedicated ACRE → AMR skill. Let me switch to that."
 
-Respond with:
-> "This skill only covers migrations from Azure Cache for Redis (Basic, Standard, and Premium tiers) to Azure Managed Redis. Please consult Microsoft support or the official documentation for Enterprise tier migration guidance."
+Then load and follow [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md) instead of this file. The ACRE skill provides three modes: Automation Script Update, Interactive Cache Migration, and Generic Migration Guide.
 
-**Supported source tiers**: Basic (C0-C6), Standard (C0-C6), Premium (P1-P5)
-**Not supported**: Enterprise, Enterprise Flash
+**Supported by this file**: Basic (C0-C6), Standard (C0-C6), Premium (P1-P5)
+**Handled by acre-to-amr/**: Enterprise (`Enterprise_*`), Enterprise Flash (`EnterpriseFlash_*`)
+
+### ACRE Skill Safety Rules (always apply)
+
+When operating under the ACRE → AMR skill, the following safety rules from [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md) MUST be followed at all times:
+
+1. **Advisory by default** — Do NOT directly edit, create, or modify user files unless the user explicitly asks. If the user requests changes, apply them and then remind: *"These changes were generated by AI. Please review all modifications thoroughly before committing or deploying them to ensure correctness and completeness."*
+2. **Safe agent for interactive migration** — Get explicit user confirmation before every step that modifies production resources. **NEVER delete any resource directly** — provide the exact command or portal guidance and instruct the user to execute it themselves.
+3. **Step-by-step with confirmation gates** — Present one migration step at a time. Wait for the user to confirm before proceeding. Do NOT batch steps or skip ahead.
+4. **No rollback for in-place migration** — Warn users that in-place migration cannot be rolled back to ACRE. Recommend non-business hours and suggest creating a separate AMR cache as an alternative for full rollback flexibility.
 
 ## ⚠️ AMR Terminology: No "Shards"
 
@@ -111,8 +152,8 @@ See [Retirement FAQ](references/retirement-faq.md) for retirement dates, timelin
 **Relevant to this skill (ACR Basic/Standard/Premium)**:
 - **Basic/Standard/Premium**: Retire September 30, 2028
 
-**Not covered by this skill**:
-- Enterprise/Enterprise Flash retirement (March 31, 2027) - contact Microsoft support
+**Not covered by this file**:
+- Enterprise/Enterprise Flash retirement (March 31, 2027) — see [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md)
 
 ### Migration Overview
 See [Migration Overview](references/migration-overview.md) for detailed migration guidance including:
@@ -201,7 +242,7 @@ Refer to [SKU Mapping Guide](references/sku-mapping.md) and consider:
 Check [Feature Comparison](references/feature-comparison.md) for the current feature matrix. Use the MCP server to fetch the latest documentation for authoritative information.
 
 ### What about Enterprise tier migration?
-**This skill does not cover Enterprise tier migrations.** If asked about ACRE (Azure Cache for Redis Enterprise) migration, inform the user that Enterprise tier has different considerations and they should consult Microsoft support or official documentation.
+Enterprise tier (ACRE) migration is covered by the dedicated [`acre-to-amr/SKILL.md`](acre-to-amr/SKILL.md). If asked about ACRE migration, switch to that skill — it provides automation script update checklists, interactive step-by-step cache migration, and a generic migration guide. Do NOT use this file's references for Enterprise tier.
 
 ## Tips for Effective Migration
 

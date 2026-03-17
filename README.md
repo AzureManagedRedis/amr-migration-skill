@@ -1,13 +1,22 @@
 # AMR Migration Skill
 
-An [Open Agent Skill](https://agentskills.io) to help users migrate from Azure Cache for Redis to Azure Managed Redis (AMR).
+An [Open Agent Skill](https://agentskills.io) to help users migrate to Azure Managed Redis (AMR) from both Azure Cache for Redis (ACR) and Azure Cache for Redis Enterprise (ACRE).
 
 ## Overview
 
+This skill covers **two migration paths** under one roof:
+
+| Source | Target | Folder | Description |
+|--------|--------|--------|-------------|
+| **ACR** Basic/Standard/Premium | AMR | Root (`SKILL.md` + `references/`) | SKU selection, data migration strategies, feature comparison |
+| **ACRE** Enterprise/Enterprise Flash | AMR | [`acre-to-amr/`](acre-to-amr/README.md) | Automation script updates, interactive cache migration, in-place & geo-replicated migration |
+
 This skill assists AI agents in helping users:
-- Compare features between Azure Cache for Redis and Azure Managed Redis
-- Select appropriate AMR SKUs based on existing ACR cache configurations
+- Compare features between ACR/ACRE and Azure Managed Redis
+- Select appropriate AMR SKUs based on existing cache configurations
 - Plan and execute migrations with best practices
+- Update automation scripts (ARM, Bicep, CLI, PowerShell) for ACRE → AMR changes
+- Perform interactive step-by-step ACRE cache migration with confirmation gates
 - Troubleshoot common migration issues
 
 ## Usage
@@ -102,14 +111,18 @@ Try these prompts to get started:
 - **"What port does AMR use? Our app currently connects on 6380."**
 - **"What changes do I need to make to my connection string when moving to AMR?"**
 
+### ACRE → AMR Migration
+
+For ACRE (Enterprise/Enterprise Flash) migration prompts — including automation script updates, interactive cache migration, and generic migration guides — see the [ACRE sub-skill README](acre-to-amr/README.md#example-prompts).
+
 ## Skill Structure
 
 ```
 amr-migration-skill/
-├── SKILL.md              # Main skill definition and instructions
+├── SKILL.md              # Main skill: routing + ACR migration rules
 ├── README.md             # This file
 ├── TODO.md               # Roadmap items
-├── references/
+├── references/           # ACR → AMR reference files
 │   ├── azure-cli-commands.md    # Azure CLI reference for ACR discovery
 │   ├── feature-comparison.md    # ACR vs AMR feature matrix
 │   ├── mcp-server-config.md     # MCP server setup for live documentation
@@ -118,11 +131,23 @@ amr-migration-skill/
 │   ├── retirement-faq.md        # ACR retirement dates and FAQ
 │   ├── sku-mapping.md           # SKU selection guidelines & decision matrix
 │   └── amr-sku-specs.md         # AMR SKU definitions (M, B, X, Flash series)
-└── scripts/
-    ├── get_acr_metrics.ps1      # Pull ACR metrics for SKU sizing
-    ├── get_acr_metrics.sh
-    ├── get_redis_price.ps1      # Pricing with HA/shards/MRPP logic
-    └── get_redis_price.sh
+├── scripts/              # Utility scripts
+│   ├── get_acr_metrics.ps1      # Pull ACR metrics for SKU sizing
+│   ├── get_acr_metrics.sh
+│   ├── get_redis_price.ps1      # Pricing with HA/shards/MRPP logic
+│   └── get_redis_price.sh
+└── acre-to-amr/          # ACRE → AMR migration files
+    ├── SKILL.md                 # ACRE skill: 3 modes, behavior rules
+    ├── README.md                # ACRE skill overview and prompts
+    └── references/              # ACRE → AMR migration reference files
+        ├── BREAKING-CHANGES.md          # Property changes, DNS, PE strategies
+        ├── SCRIPT-ANALYSIS.md           # Detection, validation guardrails
+        ├── SKU-RESOLUTION.md            # listSkusForScaling + fallback table
+        ├── CHECKLISTS.md                # Per-script checklists (ARM/Bicep/CLI/PS)
+        ├── EXAMPLES.md                  # Before/after code examples
+        ├── MIGRATION-GUIDE.md           # Generic migration guide
+        ├── INTERACTIVE-MIGRATION.md     # Interactive step-by-step migration
+        └── TROUBLESHOOTING.md           # Pitfalls and FAQ
 ```
 
 ## External Resources
