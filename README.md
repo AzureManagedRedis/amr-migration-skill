@@ -136,16 +136,18 @@ Try these prompts to get started:
 amr-migration-skill/
 ├── SKILL.md              # Main skill definition and instructions
 ├── README.md             # This file
+├── VERSION               # Skill version (used by manual update check)
 ├── evals/
 │   ├── evals.json            # Test cases with prompts and assertions
 │   └── eval-config.json      # Run modes (quick/standard/full) and grader context
 ├── references/
 │   ├── amr-sku-specs.md         # AMR SKU definitions (M, B, X, Flash series)
+│   ├── automated-migration.md   # Full automated migration workflow & prerequisites
 │   ├── azure-cli-commands.md    # Azure CLI reference for ACR discovery
 │   ├── feature-comparison.md    # ACR vs AMR feature matrix
 │   ├── mcp-server-config.md     # MCP server setup for live documentation
 │   ├── migration-overview.md    # Migration strategies and guidance
-│   ├── migration-scripts.md     # Automated migration scripts deep-dive & API reference
+│   ├── migration-scripts.md     # Automated migration ARM API deep-dive
 │   ├── migration-validation.md  # Validation errors & warnings reference
 │   ├── pricing-tiers.md         # Pricing calculation rules
 │   ├── retirement-faq.md        # ACR retirement dates and FAQ
