@@ -2,7 +2,7 @@
 // Changes:
 //   - Resource split: redis → redisEnterprise + databases
 //   - SKU: Premium/P/2 x 3 shards → Balanced_B50
-//   - Clustering: OSSCluster (source had shardCount=3, cluster-aware clients assumed)
+//   - Clustering: EnterpriseCluster (default; use OSSCluster only if client is cluster-aware)
 //   - Eviction: volatile-lru → VolatileLRU
 //   - Persistence: rdb-backup-frequency 60 min → rdbFrequency 1h
 //   - Persistence: storage connection removed (AMR manages internally)
@@ -43,7 +43,7 @@ resource redisDatabase 'Microsoft.Cache/redisEnterprise/databases@2025-07-01' = 
     clientProtocol: 'Encrypted'
     port: 10000
     evictionPolicy: 'VolatileLRU'
-    clusteringPolicy: 'OSSCluster'
+    clusteringPolicy: 'EnterpriseCluster' // Use 'OSSCluster' only if client is cluster-aware
     persistence: {
       rdbEnabled: true
       rdbFrequency: '1h'

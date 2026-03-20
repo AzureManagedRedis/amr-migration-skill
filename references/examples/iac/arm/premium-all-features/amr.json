@@ -8,7 +8,7 @@
     "_changes": [
       "Resource split: redis → redisEnterprise + databases + privateEndpoint + privateDnsZoneGroup",
       "SKU: Premium/P/2 x 3 shards → Balanced_B50",
-      "Clustering: OSSCluster (source had shardCount=3, cluster-aware clients assumed)",
+      "Clustering: EnterpriseCluster (default; use OSSCluster only if client is cluster-aware)",
       "Eviction: volatile-lfu → VolatileLFU",
       "Persistence: rdb-backup-frequency 360 min → rdbFrequency 6h",
       "Persistence: storage connection + auth method removed (AMR manages internally)",
@@ -59,7 +59,7 @@
         "clientProtocol": "Encrypted",
         "port": 10000,
         "evictionPolicy": "VolatileLFU",
-        "clusteringPolicy": "OSSCluster",
+        "clusteringPolicy": "EnterpriseCluster",
         "persistence": {
           "rdbEnabled": true,
           "rdbFrequency": "6h"

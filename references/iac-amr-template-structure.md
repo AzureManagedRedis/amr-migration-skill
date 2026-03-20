@@ -421,53 +421,63 @@ If a `skuName` parameter already exists, change its `defaultValue` from the ACR 
 
 ## 12. Terraform Output Structure
 
-For Terraform, generate two resources with an implicit dependency via `cluster_id`:
+Use `azurerm_managed_redis` — the recommended resource for AMR (replaces the deprecated `azurerm_redis_enterprise_cluster` + `azurerm_redis_enterprise_database`). This single resource includes an inline `default_database` block for database configuration.
 
-### Cluster Resource
+### Resource Structure
 
 ```hcl
-resource "azurerm_redis_enterprise_cluster" "this" {
+resource "azurerm_managed_redis" "this" {
   name                = var.cache_name
   location            = var.location
   resource_group_name = var.resource_group_name
   sku_name            = "Balanced_B50"
-  minimum_tls_version = "1.2"
-  tags                = var.tags
-}
-```
 
-### Database Resource
-
-```hcl
-resource "azurerm_redis_enterprise_database" "default" {
-  name              = "default"
-  cluster_id        = azurerm_redis_enterprise_cluster.this.id
-  port              = 10000
-  client_protocol   = "Encrypted"
-  clustering_policy = "EnterpriseCluster"
-  eviction_policy   = "VolatileLRU"
-}
-```
-
-### Persistence (⚠️ Requires AzAPI Provider)
-
-The `azurerm` provider does **NOT** support RDB/AOF persistence on `azurerm_redis_enterprise_database`. Use the **AzAPI provider** (`azapi_update_resource`) to configure persistence:
-
-```hcl
-# Requires: terraform { required_providers { azapi = { source = "Azure/azapi" } } }
-resource "azapi_update_resource" "db_persistence" {
-  type        = "Microsoft.Cache/redisEnterprise/databases@2025-07-01"
-  resource_id = azurerm_redis_enterprise_database.default.id
-  body = {
-    properties = {
-      persistence = {
-        rdbEnabled   = true
-        rdbFrequency = "1h"   # Maps from ACR rdb_backup_frequency: 60→"1h", 360→"6h", 720→"12h"
-      }
-    }
+  identity {
+    type = "SystemAssigned"
   }
+
+  default_database {
+    client_protocol   = "Encrypted"
+    clustering_policy = "EnterpriseCluster"
+    eviction_policy   = "VolatileLRU"
+  }
+
+  tags = var.tags
 }
 ```
+
+### Key Attributes
+
+| Attribute | Location | Notes |
+|---|---|---|
+| `sku_name` | top-level | Compound name (e.g., `Balanced_B5`) |
+| `identity` | nested block | Supports `SystemAssigned`, `UserAssigned`, or both |
+| `public_network_access` | top-level | `"Enabled"` or `"Disabled"` (string, not bool) |
+| `high_availability_enabled` | top-level | Default `true` — set `false` for dev/test (50% savings) |
+| `default_database` | nested block | Database properties (clustering, eviction, persistence, modules) |
+| `hostname` | computed output | Use `azurerm_managed_redis.this.hostname` instead of constructing |
+
+### Database Block Attributes
+
+| Attribute | Maps From | Notes |
+|---|---|---|
+| `client_protocol` | — | Always `"Encrypted"` |
+| `clustering_policy` | — | `"EnterpriseCluster"` or `"OSSCluster"` |
+| `eviction_policy` | `maxmemory_policy` | PascalCase (e.g., `"VolatileLRU"`) |
+| `persistence_redis_database_backup_frequency` | `rdb_backup_frequency` | `"1h"`, `"6h"`, or `"12h"` |
+| `persistence_append_only_file_backup_frequency` | `aof_backup_enabled` | `"1s"` or `"always"` |
+| `port` | — | Computed, defaults to `10000` |
+| `geo_replication_group_name` | — | For active geo-replication |
+
+### Persistence Mapping
+
+| ACR `rdb_backup_frequency` | AMR `persistence_redis_database_backup_frequency` |
+|---|---|
+| `60` | `"1h"` |
+| `360` | `"6h"` |
+| `720` | `"12h"` |
+
+For AOF, use `persistence_append_only_file_backup_frequency` = `"1s"` or `"always"`.
 
 ### Private Endpoint Resource
 
@@ -480,7 +490,7 @@ resource "azurerm_private_endpoint" "redis" {
 
   private_service_connection {
     name                           = "redisEnterprise"
-    private_connection_resource_id = azurerm_redis_enterprise_cluster.this.id
+    private_connection_resource_id = azurerm_managed_redis.this.id
     subresource_names              = ["redisEnterprise"]
     is_manual_connection           = false
   }
@@ -491,9 +501,19 @@ resource "azurerm_private_endpoint" "redis" {
 
 | ACR Terraform Resource | AMR Terraform Resource |
 |---|---|
-| `azurerm_redis_cache` | `azurerm_redis_enterprise_cluster` + `azurerm_redis_enterprise_database` |
+| `azurerm_redis_cache` | `azurerm_managed_redis` (single resource with `default_database` block) |
 | `azurerm_redis_firewall_rule` | Remove — use NSG on PE subnet |
 | `azurerm_private_endpoint` (with `redisCache`) | Update `subresource_names` to `["redisEnterprise"]` |
+
+### Attributes NOT on `azurerm_managed_redis`
+
+These ACR attributes do not exist on the AMR resource — remove them:
+- `minimum_tls_version` — not configurable on managed redis resource
+- `zones` — AMR manages zone redundancy automatically
+- `capacity`, `family` — encoded in `sku_name`
+- `enable_non_ssl_port`, `redis_version` — not applicable
+- `shard_count`, `replicas_per_primary` — not exposed in AMR
+- `redis_configuration` block — replaced by `default_database` block
 
 ---
 

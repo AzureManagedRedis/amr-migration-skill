@@ -303,13 +303,14 @@ These have separate template + parameters files. The AI must read **both** files
 | **ACR Config** | Basic C3, noeviction, SystemAssigned identity |
 
 **Validations:**
-- [ ] Resource type: `azurerm_redis_cache` → `azurerm_redis_enterprise_cluster` + `azurerm_redis_enterprise_database`
+- [ ] Resource type: `azurerm_redis_cache` → `azurerm_managed_redis` (single resource)
 - [ ] SKU → `Balanced_B5`
 - [ ] Eviction: `noeviction` → `NoEviction`
 - [ ] Clustering: `EnterpriseCluster`
-- [ ] Identity preserved (SystemAssigned)
-- [ ] Removed: `enable_non_ssl_port`, `redis_version`, `redis_configuration` block
-- [ ] Output: `ssl_port` removed, `hostname` updated to `.redis.azure.net`
+- [ ] Identity preserved (SystemAssigned) via `identity` block
+- [ ] Database config in `default_database` inline block (not separate resource)
+- [ ] Removed: `enable_non_ssl_port`, `redis_version`, `redis_configuration` block, `minimum_tls_version`
+- [ ] Output: `hostname` uses `azurerm_managed_redis.this.hostname` (computed)
 
 ---
 
@@ -322,15 +323,14 @@ These have separate template + parameters files. The AI must read **both** files
 | **ACR Config** | Premium P2 × 3 shards + RDB persistence in Terraform syntax |
 
 **Validations:**
-- [ ] Resource split into cluster + database
+- [ ] Resource type: `azurerm_redis_cache` → `azurerm_managed_redis` (single resource)
 - [ ] SKU → `Balanced_B50` (P2 × 3 shards = 39 GB)
-- [ ] Clustering: `OSSCluster` (source had shard_count=3)
-- [ ] RDB persistence: notes AzAPI provider required (azurerm does not support persistence on enterprise DB)
-- [ ] Persistence shown as commented `azapi_update_resource` block with `rdbFrequency: "1h"`
+- [ ] Clustering: `EnterpriseCluster` (default; source had shard_count=3 but default is EnterpriseCluster)
+- [ ] RDB persistence: `persistence_redis_database_backup_frequency = "1h"` in `default_database` block
 - [ ] Storage connection string removed
 - [ ] Identity preserved (`SystemAssigned, UserAssigned` + identity_ids)
 - [ ] Zones removed
-- [ ] Removed: `shard_count`, `maxmemory_reserved`, `maxfragmentationmemory_reserved`
+- [ ] Removed: `shard_count`, `maxmemory_reserved`, `maxfragmentationmemory_reserved`, `minimum_tls_version`
 
 ---
 

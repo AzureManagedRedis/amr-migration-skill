@@ -61,7 +61,7 @@ Generate the output in the **same IaC format** as the input (ARM JSON → ARM JS
 > - **`publicNetworkAccess`**: REQUIRED in `2025-07-01`. Preserve from source; default `"Enabled"` if absent.
 > - **`sku.capacity`**: Do NOT include — B/M/X/A series encode size in the name (e.g., `Balanced_B10`)
 > - **`zones`**: Do NOT include — AMR auto-manages zone redundancy. Specifying it causes deployment errors.
-> - **Terraform persistence**: The `azurerm` provider does NOT support RDB/AOF on `azurerm_redis_enterprise_database`. Use the AzAPI provider (`azapi_update_resource`) for persistence. See [AMR Template Structure §12](iac-amr-template-structure.md#12-terraform-output-structure).
+> - **Terraform**: Use `azurerm_managed_redis` (NOT the deprecated `azurerm_redis_enterprise_cluster`). Single resource with inline `default_database` block. See [AMR Template Structure §12](iac-amr-template-structure.md#12-terraform-output-structure).
 
 ## Step 7: Present Output
 
