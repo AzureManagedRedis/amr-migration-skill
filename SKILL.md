@@ -1,12 +1,17 @@
 ---
 name: amr-migration-skill
 description: |
-  Helps users migrate from Azure Cache for Redis (ACR/OSS) to Azure Managed Redis (AMR).
+  Helps users migrate from Azure Cache for Redis (ACR/OSS) Basic, Standard, and Premium tiers
+  to Azure Managed Redis (AMR). Provides SKU mapping, real-time pricing scripts, cache metrics
+  assessment, and automated migration via ARM REST APIs with DNS switching.
   Use when users ask about: Redis migration, ACR to AMR, OSS to AMR, automated migration,
-  DNS switch migration, cache retirement deadline, SKU selection, AMR vs ACR features,
-  feature compatibility, pricing comparison, cache upgrade, Basic/Standard/Premium tier migration,
-  P1/P2/C3 cache migration, AMR SKU recommendation, migration rollback, or migration validation.
-  Also use for: running migration scripts, checking migration status, cache assessment and metrics.
+  DNS switch migration, cache retirement deadline, ACR retirement date, SKU selection,
+  AMR vs ACR features, feature compatibility, Redis module support, pricing comparison,
+  cache upgrade, Basic/Standard/Premium tier migration, P1/P2/C3 cache migration,
+  AMR SKU recommendation, migration rollback, migration validation, connection string changes,
+  port changes, cache assessment and metrics, or checking for amr-migration-skill updates.
+  Do NOT use for: Enterprise (ACRE) tier migrations, creating new Redis caches, or general
+  Redis performance tuning.
 ---
 
 # Azure Managed Redis Migration Skill
