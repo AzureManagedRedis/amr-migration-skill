@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migrationSource": "Migrated from ACR Standard C2 parameters",
+    "_removedParams": [
+      "enableNonSslPort — AMR is TLS-only",
+      "redisVersion — AMR runs Redis 7.4+",
+      "skuName/skuFamily/skuCapacity — replaced by amrSkuName",
+      "aadEnabled — AMR uses Entra ID natively"
+    ]
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "devteam-cache-eastus2"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "amrSkuName": {
+      "value": "Balanced_B5"
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "publicNetworkAccess": {
+      "value": "Enabled"
+    },
+    "clusteringPolicy": {
+      "value": "EnterpriseCluster"
+    },
+    "evictionPolicy": {
+      "value": "AllKeysLRU"
+    },
+    "clientProtocol": {
+      "value": "Encrypted"
+    },
+    "port": {
+      "value": 10000
+    },
+    "tags": {
+      "value": {
+        "Environment": "Development",
+        "Team": "Backend",
+        "CostCenter": "CC-9900"
+      }
+    }
+  }
+}

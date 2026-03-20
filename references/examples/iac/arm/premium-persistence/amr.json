@@ -1,0 +1,71 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P2 with AOF → AMR Balanced_B10 with AOF persistence",
+    "_migratedFrom": "Premium P2 (13 GB) with AOF persistence",
+    "_targetSkuInfo": "Balanced_B10 (comparable to Premium P2)",
+    "_changes": [
+      "Resource split: redis → redisEnterprise + databases",
+      "SKU: Premium/P/2 → Balanced_B10",
+      "Eviction: allkeys-lfu → AllKeysLFU",
+      "Persistence: aof-backup-enabled → aofEnabled: true, aofFrequency: 1s",
+      "Persistence: storage connection string removed (AMR manages internally)",
+      "Identity: preserved (type + userAssignedIdentities, not principalId/tenantId)",
+      "Removed: shardCount, enableNonSslPort, redisVersion"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-07-01",
+      "name": "my-aof-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "PaymentProcessor"
+      },
+      "identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-persistence": {}
+        }
+      },
+      "sku": {
+        "name": "Balanced_B10"
+      },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-07-01",
+      "name": "my-aof-cache/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-aof-cache')]"
+      ],
+      "properties": {
+        "clientProtocol": "Encrypted",
+        "port": 10000,
+        "evictionPolicy": "AllKeysLFU",
+        "clusteringPolicy": "EnterpriseCluster",
+        "persistence": {
+          "aofEnabled": true,
+          "aofFrequency": "1s"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-aof-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[concat('my-aof-cache', '.westus2.redis.azure.net')]"
+    }
+  }
+}

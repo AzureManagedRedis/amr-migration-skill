@@ -7,6 +7,7 @@ An [Open Agent Skill](https://agentskills.io) to help users migrate from Azure C
 This skill assists AI agents in helping users:
 - Compare features between Azure Cache for Redis and Azure Managed Redis
 - Select appropriate AMR SKUs based on existing ACR cache configurations
+- **Convert IaC templates (ARM, Bicep, Terraform) from ACR to AMR format** — pure AI-driven, no conversion scripts needed
 - Plan and execute migrations with best practices
 - Troubleshoot common migration issues
 
@@ -98,6 +99,12 @@ Try these prompts to get started:
 ### Retirement & Timeline
 - **"When is Azure Cache for Redis being retired? What's the timeline for Basic/Standard/Premium?"**
 
+### IaC Template Migration
+- **"Convert this ARM template from ACR to AMR format."** *(paste or point to your template)*
+- **"I have a Bicep file for a Premium P2 cache with VNet injection. Migrate it to AMR."**
+- **"Convert our clustered Premium P2 ARM template to AMR. We use 3 shards with RDB persistence."**
+- **"Migrate our Terraform ACR module to AMR — we need Private Endpoint instead of VNet injection."**
+
 ### Quick Questions
 - **"What port does AMR use? Our app currently connects on 6380."**
 - **"What changes do I need to make to my connection string when moving to AMR?"**
@@ -109,21 +116,30 @@ amr-migration-skill/
 ├── SKILL.md              # Main skill definition and instructions
 ├── README.md             # This file
 ├── TODO.md               # Roadmap items
+├── .gitignore
 ├── references/
-│   ├── azure-cli-commands.md    # Azure CLI reference for ACR discovery
-│   ├── feature-comparison.md    # ACR vs AMR feature matrix
-│   ├── mcp-server-config.md     # MCP server setup for live documentation
-│   ├── migration-overview.md    # Migration strategies and guidance
-│   ├── pricing-tiers.md         # Pricing calculation rules
-│   ├── retirement-faq.md        # ACR retirement dates and FAQ
-│   ├── sku-mapping.md           # SKU selection guidelines & decision matrix
-│   └── amr-sku-specs.md         # AMR SKU definitions (M, B, X, Flash series)
+│   ├── azure-cli-commands.md         # Azure CLI reference for ACR discovery
+│   ├── feature-comparison.md         # ACR vs AMR feature matrix
+│   ├── iac-acr-template-parsing.md   # How to parse ACR IaC templates
+│   ├── iac-amr-template-structure.md # AMR template transformation rules
+│   ├── mcp-server-config.md          # MCP server setup for live documentation
+│   ├── migration-overview.md         # Migration strategies and guidance
+│   ├── pricing-tiers.md              # Pricing calculation rules
+│   ├── retirement-faq.md             # ACR retirement dates and FAQ
+│   ├── sku-mapping.md                # SKU selection guidelines & decision matrix
+│   ├── amr-sku-specs.md              # AMR SKU definitions (M, B, X, Flash series)
+│   └── examples/iac/                 # Before/after template pairs
+│       ├── arm/                      # ARM JSON (inline values) — 6 scenarios
+│       ├── arm-parameterized/        # ARM JSON with parameter files — 4 scenarios
+│       └── bicep/                    # Bicep format — 2 scenarios
 └── scripts/
     ├── get_acr_metrics.ps1      # Pull ACR metrics for SKU sizing
     ├── get_acr_metrics.sh
     ├── get_redis_price.ps1      # Pricing with HA/shards/MRPP logic
     └── get_redis_price.sh
 ```
+
+> **Note**: IaC template conversion is AI-driven — the agent reads the reference docs and example templates to generate migrated output directly. Scripts are only used for pricing lookups and metrics retrieval. For CI/CD pipeline automation (batch conversion without an AI agent), a standalone PowerShell tool will be available in a separate repository.
 
 ## External Resources
 

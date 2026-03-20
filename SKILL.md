@@ -3,7 +3,8 @@ name: amr-migration-skill
 description: |
   Helps users migrate from Azure Cache for Redis (ACR) to Azure Managed Redis (AMR).
   Use when users ask about: Redis migration, AMR vs ACR features, SKU selection, 
-  migration best practices, feature compatibility, or Azure Redis cache upgrades.
+  migration best practices, feature compatibility, Azure Redis cache upgrades,
+  or IaC template migration (ARM, Bicep, Terraform).
 ---
 
 # Azure Managed Redis Migration Skill
@@ -41,12 +42,7 @@ Respond with:
 
 ## When to Use This Skill
 
-Activate this skill when the user:
-- Asks about migrating from Azure Cache for Redis to Azure Managed Redis
-- Wants to compare ACR features with AMR features
-- Needs help selecting the right AMR SKU for their workload
-- Has questions about feature compatibility between ACR and AMR
-- Wants to understand migration best practices and considerations
+Activate when the user asks about ACR → AMR migration, SKU selection, feature comparison, or IaC template conversion (Bicep/ARM/Terraform). See **Workflow Selection** below to determine which workflow to follow.
 
 ## Available Resources
 
@@ -120,6 +116,39 @@ See [Migration Overview](references/migration-overview.md) for detailed migratio
 - Connection string changes
 - Clustering policy and network isolation considerations
 
+### Infrastructure-as-Code (IaC) Template Migration
+For converting ACR templates (ARM, Bicep, Terraform) to AMR format, use these reference docs:
+- [ACR Template Parsing Guide](references/iac-acr-template-parsing.md) — How to read and extract configuration from ACR templates
+- [AMR Template Structure Guide](references/iac-amr-template-structure.md) — Transformation rules, property mappings, and output structure for AMR templates
+- [Example Templates](references/examples/iac/) — Before/after template pairs organized by format:
+  - `arm/` — 6 ARM JSON scenarios (basic, premium non-clustered, clustered, VNet, persistence, all-features)
+  - `arm-parameterized/` — 4 ARM JSON scenarios with separate parameter files
+  - `bicep/` — 2 Bicep scenarios (basic, premium clustered)
+
+## Workflow Selection
+
+**Choose the correct workflow based on the user's intent.** The two workflows are independent — do not mix their steps.
+
+| User Intent | Signal Phrases | Workflow |
+|---|---|---|
+| Move a live cache to AMR | "migrate cache", "move to AMR", "select SKU", "assess metrics", "migration strategy", "switch traffic" | **Migration Workflow** (Steps 1-4) |
+| Convert IaC templates to AMR format | "convert template", "Bicep migration", "ARM to AMR", "Terraform", "IaC", "template transformation", "region buildout" | **IaC Migration Workflow** (Steps 1-7) |
+| Compare features or answer general questions | "compare ACR vs AMR", "feature compatibility", "retirement date", "best practices" | Answer directly using reference docs — no workflow needed |
+
+### Ambiguous Requests
+
+If the user's intent is unclear (e.g., "help me migrate to AMR" could mean either), ask:
+
+> "Are you looking to **migrate a live cache** (data migration, SKU selection, traffic cutover) or **convert your infrastructure-as-code templates** (Bicep/ARM/Terraform) to AMR format? Or both?"
+
+### Both Workflows
+
+If the user needs both (e.g., "migrate everything including our IaC"):
+1. Run **Migration Workflow** first — this determines the target AMR SKU and validates sizing with metrics
+2. Then run **IaC Migration Workflow** — using the SKU selected in step 1 as the target
+
+---
+
 ## Migration Workflow
 
 ### Step 1: Assess Current Cache
@@ -181,6 +210,87 @@ Use these values to:
 2. Migrate data using appropriate method
 3. Validate data integrity
 4. Switch application traffic to new cache
+
+---
+
+## IaC Migration Workflow
+
+Use this workflow when the user asks to convert ACR Bicep/ARM/Terraform templates to AMR format. The AI reads the user's template, applies transformation rules from the reference docs, and generates the migrated output directly. Scripts are only used for pricing lookups (Step 3).
+
+> **Critical**: Do NOT skip the customer confirmation gate (Step 5). Always present pricing and feature gaps before generating the migrated template.
+
+### Step 1: Parse ACR Template
+
+Read the user's ACR template (ARM JSON, Bicep, or Terraform). Follow the [ACR Template Parsing Guide](references/iac-acr-template-parsing.md) to extract the SKU, enabled features, and all configuration settings.
+
+> **`shardCount: 0` warning**: Azure portal exports may include `"shardCount": 0` for non-clustered Premium caches. This is an export artifact — treat it the same as absent (non-clustered). Do NOT include `shardCount: 0` in any generated template; ARM rejects it on deployment.
+
+### Step 2: Select Target AMR SKU
+
+Look up the source SKU in the [SKU Mapping Guide](references/sku-mapping.md) to find the target AMR SKU.
+
+- For **Basic/Standard** (C0-C6): map directly using the table-based mapping
+- For **Premium** (P1-P5): account for shard count — total memory = capacity × (shardCount + 1)
+
+> **Optimization opportunity**: If the user has Azure access and wants to right-size, suggest running **Migration Workflow Step 1** first to gather actual usage metrics. Otherwise, use the table-based mapping from the SKU Mapping Guide.
+
+### Step 3: Get Pricing Comparison
+
+Run the pricing scripts for both source and target SKUs to show the cost impact:
+
+```powershell
+# Source ACR pricing
+.\scripts\get_redis_price.ps1 -SKU <source-sku> -Region <region> [-Shards N] [-Replicas N]
+
+# Target AMR pricing
+.\scripts\get_redis_price.ps1 -SKU <target-amr-sku> -Region <region>
+```
+
+### Step 4: Identify Feature Gaps
+
+Check [Feature Comparison](references/feature-comparison.md) for features that change or are removed in AMR. Key items to flag:
+- **Clustering policy decision**: If source had `shardCount ≥ 1`, ask whether the client is cluster-aware (determines `OSSCluster` vs `EnterpriseCluster`)
+- **VNet injection → Private Endpoint**: Source `subnetId` requires a PE resource in the output
+- **Geo-replication**: ACR `linkedServers` (passive) cannot be auto-converted to AMR active geo-replication — warn the user
+- **Removed properties**: `enableNonSslPort`, `redisVersion`, `replicasPerPrimary`, memory reservation configs
+
+### Step 5: ⛔ Customer Confirmation Gate
+
+**STOP.** Present the following to the user and wait for explicit approval before generating the template:
+
+1. **Target AMR SKU** and how it was selected
+2. **Pricing comparison** — source monthly cost vs target monthly cost
+3. **Feature gaps** — what changes, what's removed, what needs manual attention
+4. **Clustering policy recommendation** — and why (default: `EnterpriseCluster` unless user confirms cluster-aware client)
+
+**Wait for explicit confirmation before proceeding to Step 6.**
+
+### Step 6: Generate AMR Template
+
+Apply the transformation rules from the [AMR Template Structure Guide](references/iac-amr-template-structure.md) to generate the migrated template. Reference the [example templates](references/examples/iac/) for grounding on the expected output format.
+
+Generate the output in the **same IaC format** as the input (ARM JSON → ARM JSON, Bicep → Bicep, Terraform → Terraform).
+
+> **Deployment-validated gotchas** (these cause deployment failures if missed):
+> - **API version**: Must be `2025-07-01` — earlier versions reject `publicNetworkAccess`
+> - **`publicNetworkAccess`**: REQUIRED in `2025-07-01`. Preserve from source; default `"Enabled"` if absent.
+> - **`sku.capacity`**: Do NOT include — B/M/X/A series encode size in the name (e.g., `Balanced_B10`)
+> - **`zones`**: Do NOT include — AMR auto-manages zone redundancy. Specifying it causes deployment errors.
+
+### Step 7: Present Output
+
+Show the migrated template and a summary of changes:
+- List every property that was transformed, added, or removed
+- Highlight any items requiring manual attention (e.g., geo-replication, PE subnet selection)
+- Provide the validation command:
+
+```bash
+# ARM JSON
+az deployment group validate -g <resource-group> --template-file <migrated-file>
+
+# Bicep
+az deployment group validate -g <resource-group> --template-file <migrated-file>.bicep
+```
 
 ## Common Questions
 

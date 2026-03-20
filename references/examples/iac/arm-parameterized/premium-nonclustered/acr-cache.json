@@ -1,0 +1,140 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Parameterized Premium P1 non-clustered — Premium features but shardCount=0"
+  },
+  "parameters": {
+    "redisCacheName": {
+      "type": "string",
+      "metadata": { "description": "Name of the Azure Cache for Redis instance." }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": { "description": "Azure region." }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "Premium",
+      "metadata": { "description": "Pricing tier." }
+    },
+    "skuFamily": {
+      "type": "string",
+      "defaultValue": "P",
+      "metadata": { "description": "SKU family." }
+    },
+    "skuCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": { "description": "Cache size (1-5 for P family)." }
+    },
+    "enableNonSslPort": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable the non-TLS port (6379)." }
+    },
+    "minimumTlsVersion": {
+      "type": "string",
+      "defaultValue": "1.2",
+      "metadata": { "description": "Minimum TLS version." }
+    },
+    "redisVersion": {
+      "type": "string",
+      "defaultValue": "6",
+      "metadata": { "description": "Redis server version." }
+    },
+    "publicNetworkAccess": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "allowedValues": ["Enabled", "Disabled"],
+      "metadata": { "description": "Public network access." }
+    },
+    "shardCount": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": { "description": "Number of shards (0 = non-clustered)." }
+    },
+    "replicasPerPrimary": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": { "description": "Replicas per primary." }
+    },
+    "maxmemoryPolicy": {
+      "type": "string",
+      "defaultValue": "volatile-lru",
+      "metadata": { "description": "Eviction policy." }
+    },
+    "maxmemoryReserved": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Memory reserved (MB)." }
+    },
+    "maxfragmentationmemoryReserved": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Fragmentation memory reserved (MB)." }
+    },
+    "aadEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": { "description": "Enable Entra ID authentication." }
+    },
+    "zones": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": { "description": "Availability zones." }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": { "description": "Resource tags." }
+    }
+  },
+  "variables": {
+    "baseRedisConfig": {
+      "maxmemory-policy": "[parameters('maxmemoryPolicy')]",
+      "aad-enabled": "[if(parameters('aadEnabled'), 'true', 'false')]"
+    },
+    "reservedConfig": "[if(not(empty(parameters('maxmemoryReserved'))), createObject('maxmemory-reserved', parameters('maxmemoryReserved')), createObject())]",
+    "fragConfig": "[if(not(empty(parameters('maxfragmentationmemoryReserved'))), createObject('maxfragmentationmemory-reserved', parameters('maxfragmentationmemoryReserved')), createObject())]",
+    "redisConfiguration": "[union(variables('baseRedisConfig'), variables('reservedConfig'), variables('fragConfig'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "zones": "[if(not(empty(parameters('zones'))), parameters('zones'), createArray())]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "enableNonSslPort": "[parameters('enableNonSslPort')]",
+        "minimumTlsVersion": "[parameters('minimumTlsVersion')]",
+        "redisVersion": "[parameters('redisVersion')]",
+        "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
+        "sku": {
+          "name": "[parameters('skuName')]",
+          "family": "[parameters('skuFamily')]",
+          "capacity": "[parameters('skuCapacity')]"
+        },
+        "redisConfiguration": "[variables('redisConfiguration')]",
+        "shardCount": "[if(greater(parameters('shardCount'), 0), parameters('shardCount'), json('null'))]",
+        "replicasPerPrimary": "[parameters('replicasPerPrimary')]"
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+    },
+    "cacheHostName": {
+      "type": "string",
+      "value": "[reference(parameters('redisCacheName')).hostName]"
+    }
+  }
+}

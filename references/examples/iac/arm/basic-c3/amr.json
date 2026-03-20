@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Basic C3 → AMR Balanced_B5",
+    "_migratedFrom": "Basic C3 (6 GB)",
+    "_targetSkuInfo": "Balanced_B5 (comparable to Basic C3)",
+    "_changes": [
+      "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
+      "SKU: Basic/C/3 → Balanced_B5",
+      "Eviction: noeviction → NoEviction (PascalCase)",
+      "Clustering: EnterpriseCluster (default for non-clustered source)",
+      "Port: 6380 → 10000",
+      "Removed: enableNonSslPort, redisVersion, redisConfiguration",
+      "Added: clientProtocol Encrypted, database resource"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-07-01",
+      "name": "my-basic-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "WebApp"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "sku": {
+        "name": "Balanced_B5"
+      },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-07-01",
+      "name": "my-basic-cache/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-basic-cache')]"
+      ],
+      "properties": {
+        "clientProtocol": "Encrypted",
+        "port": 10000,
+        "evictionPolicy": "NoEviction",
+        "clusteringPolicy": "EnterpriseCluster"
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-basic-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[concat('my-basic-cache', '.westus2.redis.azure.net')]"
+    }
+  }
+}

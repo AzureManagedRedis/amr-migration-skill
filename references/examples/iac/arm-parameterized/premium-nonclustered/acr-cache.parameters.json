@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "redisCacheName": {
+      "value": "api-cache-prod-centralus"
+    },
+    "location": {
+      "value": "centralus"
+    },
+    "skuName": {
+      "value": "Premium"
+    },
+    "skuFamily": {
+      "value": "P"
+    },
+    "skuCapacity": {
+      "value": 1
+    },
+    "enableNonSslPort": {
+      "value": false
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "publicNetworkAccess": {
+      "value": "Disabled"
+    },
+    "shardCount": {
+      "value": 0
+    },
+    "replicasPerPrimary": {
+      "value": 1
+    },
+    "maxmemoryPolicy": {
+      "value": "volatile-ttl"
+    },
+    "maxmemoryReserved": {
+      "value": "300"
+    },
+    "maxfragmentationmemoryReserved": {
+      "value": "300"
+    },
+    "aadEnabled": {
+      "value": true
+    },
+    "zones": {
+      "value": ["1", "2", "3"]
+    },
+    "tags": {
+      "value": {
+        "Environment": "Production",
+        "Service": "API-Gateway",
+        "CostCenter": "CC-7700"
+      }
+    }
+  }
+}
