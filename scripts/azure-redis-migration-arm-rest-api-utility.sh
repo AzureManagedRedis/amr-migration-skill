@@ -70,11 +70,15 @@ FORCE_MIGRATE="false"
 TRACK_MIGRATION="false"
 API_VERSION="2025-08-01-preview"
 
-# --- Colors ---
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# --- Colors (disabled when output is not a terminal) ---
+if [[ -t 1 ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    CYAN='\033[0;36m'
+    NC='\033[0m'
+else
+    RED='' GREEN='' CYAN='' NC=''
+fi
 
 # --- Functions ---
 
@@ -137,7 +141,6 @@ arm_rest() {
     local url="$2"
     local body="${3:-}"
     local response
-    local tmpfile=""
 
     local args=(
         --method "$method"
@@ -147,21 +150,16 @@ arm_rest() {
     )
 
     if [[ -n "$body" ]]; then
-        # Write body to temp file to avoid shell escaping issues
-        tmpfile=$(mktemp)
-        echo "$body" > "$tmpfile"
-        args+=(--body "@${tmpfile}")
+        args+=(--body "$body")
     fi
 
     if response=$(az rest "${args[@]}" 2>&1); then
         success "The request is successful."
         echo "$response" | jq .
-        [[ -n "$tmpfile" ]] && rm -f "$tmpfile"
         return 0
     else
         echo -e "${RED}The request encountered a failure.${NC}" >&2
         echo "$response" >&2
-        [[ -n "$tmpfile" ]] && rm -f "$tmpfile"
         return 1
     fi
 }
@@ -173,6 +171,8 @@ poll_status() {
     local state="InProgress"
     local attempt=0
     local max_attempts=60  # 30 minutes max (30s intervals)
+    local response
+    local details
 
     info "Tracking operation progress (polling every 30s)..."
     echo
@@ -181,10 +181,8 @@ poll_status() {
         sleep 30
         attempt=$((attempt + 1))
 
-        local response
         response=$(az rest --method GET --url "$url" -o json 2>&1) || true
         state=$(echo "$response" | jq -r '.properties.provisioningState // "Unknown"' 2>/dev/null || echo "Unknown")
-        local details
         details=$(echo "$response" | jq -r '.properties.statusDetails // empty' 2>/dev/null || echo "")
 
         echo "  Poll $attempt: state=$state${details:+ details=$details}"
@@ -234,7 +232,7 @@ check_dependencies
 [[ -z "$TARGET_RESOURCE_ID" ]] && error_exit "Target resource ID is required. Use --target <resourceId>."
 
 # Normalize action to lowercase for matching
-ACTION_LOWER=$(echo "$ACTION" | tr '[:upper:]' '[:lower:]')
+ACTION_LOWER="${ACTION,,}"
 
 if [[ "$ACTION_LOWER" == "migrate" || "$ACTION_LOWER" == "validate" ]]; then
     [[ -z "$SOURCE_RESOURCE_ID" ]] && error_exit "Source resource ID is required for '$ACTION'. Use --source <resourceId>."
