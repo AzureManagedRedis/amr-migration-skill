@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migrationSource": "Migrated from ACR Premium P2 × 3 shards parameters",
+    "_removedParams": [
+      "enableNonSslPort — AMR is TLS-only",
+      "redisVersion — AMR runs Redis 7.4+",
+      "skuName/skuFamily/skuCapacity — replaced by amrSkuName compound format",
+      "shardCount — AMR manages clustering internally",
+      "replicasPerPrimary — AMR manages HA internally",
+      "rdbStorageConnectionString — AMR manages persistence storage",
+      "maxmemoryReserved — AMR manages memory internally",
+      "maxfragmentationmemoryReserved — AMR manages memory internally",
+      "aadEnabled — AMR uses Entra ID natively",
+      "firewallRules — not supported in AMR, use Private Endpoint + NSG"
+    ]
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "myapp-redis-prod-westus2"
+    },
+    "location": {
+      "value": "westus2"
+    },
+    "amrSkuName": {
+      "value": "Balanced_B50"
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "publicNetworkAccess": {
+      "value": "Enabled"
+    },
+    "clusteringPolicy": {
+      "value": "EnterpriseCluster"
+    },
+    "evictionPolicy": {
+      "value": "VolatileLRU"
+    },
+    "clientProtocol": {
+      "value": "Encrypted"
+    },
+    "port": {
+      "value": 10000
+    },
+    "rdbEnabled": {
+      "value": true
+    },
+    "rdbFrequency": {
+      "value": "1h"
+    },
+    "tags": {
+      "value": {
+        "Environment": "Production",
+        "Service": "MyApp",
+        "ManagedBy": "EV2",
+        "CostCenter": "12345"
+      }
+    }
+  }
+}

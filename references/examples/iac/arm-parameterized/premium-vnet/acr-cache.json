@@ -1,0 +1,156 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Parameterized Premium P1 with VNet injection — tests VNet→Private Endpoint conversion"
+  },
+  "parameters": {
+    "redisCacheName": {
+      "type": "string",
+      "metadata": { "description": "Name of the Azure Cache for Redis instance." }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": { "description": "Azure region." }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "Premium",
+      "metadata": { "description": "Pricing tier." }
+    },
+    "skuFamily": {
+      "type": "string",
+      "defaultValue": "P",
+      "metadata": { "description": "SKU family." }
+    },
+    "skuCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": { "description": "Cache size." }
+    },
+    "enableNonSslPort": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable the non-TLS port." }
+    },
+    "minimumTlsVersion": {
+      "type": "string",
+      "defaultValue": "1.2",
+      "metadata": { "description": "Minimum TLS version." }
+    },
+    "redisVersion": {
+      "type": "string",
+      "defaultValue": "6",
+      "metadata": { "description": "Redis server version." }
+    },
+    "publicNetworkAccess": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "metadata": { "description": "Public network access." }
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": { "description": "Subnet resource ID for VNet injection." }
+    },
+    "staticIP": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Static IP for VNet-injected cache." }
+    },
+    "maxmemoryPolicy": {
+      "type": "string",
+      "defaultValue": "volatile-lru",
+      "metadata": { "description": "Eviction policy." }
+    },
+    "maxmemoryReserved": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Memory reserved (MB)." }
+    },
+    "maxfragmentationmemoryReserved": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Fragmentation memory reserved (MB)." }
+    },
+    "aadEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": { "description": "Enable Entra ID authentication." }
+    },
+    "firewallRules": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": { "description": "Firewall rules: [{ name, startIP, endIP }]." }
+    },
+    "zones": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": { "description": "Availability zones." }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": { "description": "Resource tags." }
+    }
+  },
+  "variables": {
+    "redisConfiguration": {
+      "maxmemory-policy": "[parameters('maxmemoryPolicy')]",
+      "aad-enabled": "[if(parameters('aadEnabled'), 'true', 'false')]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "zones": "[if(not(empty(parameters('zones'))), parameters('zones'), createArray())]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "enableNonSslPort": "[parameters('enableNonSslPort')]",
+        "minimumTlsVersion": "[parameters('minimumTlsVersion')]",
+        "redisVersion": "[parameters('redisVersion')]",
+        "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
+        "sku": {
+          "name": "[parameters('skuName')]",
+          "family": "[parameters('skuFamily')]",
+          "capacity": "[parameters('skuCapacity')]"
+        },
+        "redisConfiguration": "[variables('redisConfiguration')]",
+        "subnetId": "[if(not(empty(parameters('subnetId'))), parameters('subnetId'), json('null'))]",
+        "staticIP": "[if(not(empty(parameters('staticIP'))), parameters('staticIP'), json('null'))]"
+      }
+    },
+    {
+      "copy": {
+        "name": "firewallRuleCopy",
+        "count": "[length(parameters('firewallRules'))]"
+      },
+      "type": "Microsoft.Cache/redis/firewallRules",
+      "apiVersion": "2024-03-01",
+      "name": "[concat(parameters('redisCacheName'), '/', parameters('firewallRules')[copyIndex()].name)]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "startIP": "[parameters('firewallRules')[copyIndex()].startIP]",
+        "endIP": "[parameters('firewallRules')[copyIndex()].endIP]"
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', parameters('redisCacheName'))]"
+    },
+    "cacheHostName": {
+      "type": "string",
+      "value": "[reference(parameters('redisCacheName')).hostName]"
+    }
+  }
+}

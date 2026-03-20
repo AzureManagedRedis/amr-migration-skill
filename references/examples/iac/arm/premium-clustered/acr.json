@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P2 clustered — 3 shards with RDB persistence",
+    "_sourceSkuInfo": "Premium P2 (13 GB) x 3 shards"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "my-clustered-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "SessionStore"
+      },
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-persistence": {}
+        }
+      },
+      "properties": {
+        "sku": {
+          "name": "Premium",
+          "family": "P",
+          "capacity": 2
+        },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "redisVersion": "6",
+        "publicNetworkAccess": "Enabled",
+        "shardCount": 3,
+        "redisConfiguration": {
+          "maxmemory-policy": "volatile-lru",
+          "aad-enabled": "true",
+          "rdb-backup-enabled": "true",
+          "rdb-backup-frequency": "60",
+          "rdb-storage-connection-string": "https://mystorageaccount.blob.core.windows.net",
+          "preferred-data-persistence-auth-method": "ManagedIdentity",
+          "storage-subscription-id": "00000000-0000-0000-0000-000000000000",
+          "maxmemory-reserved": "642",
+          "maxfragmentationmemory-reserved": "642"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', 'my-clustered-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[reference('my-clustered-cache').hostName]"
+    }
+  }
+}

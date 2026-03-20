@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P2 with AOF persistence — demonstrates AOF conversion",
+    "_sourceSkuInfo": "Premium P2 (13 GB)"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "my-aof-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "PaymentProcessor"
+      },
+      "identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-persistence": {}
+        }
+      },
+      "properties": {
+        "sku": {
+          "name": "Premium",
+          "family": "P",
+          "capacity": 2
+        },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "redisVersion": "6",
+        "publicNetworkAccess": "Enabled",
+        "redisConfiguration": {
+          "maxmemory-policy": "allkeys-lfu",
+          "aad-enabled": "true",
+          "aof-backup-enabled": "true",
+          "aof-storage-connection-string-0": "https://mystorageaccount.blob.core.windows.net",
+          "preferred-data-persistence-auth-method": "ManagedIdentity",
+          "storage-subscription-id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', 'my-aof-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[reference('my-aof-cache').hostName]"
+    }
+  }
+}

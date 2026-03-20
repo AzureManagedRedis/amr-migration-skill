@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P2 with VNet injection — demonstrates networking transformation",
+    "_sourceSkuInfo": "Premium P2 (13 GB) with VNet injection"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "my-vnet-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "InternalAPI"
+      },
+      "properties": {
+        "sku": {
+          "name": "Premium",
+          "family": "P",
+          "capacity": 2
+        },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "redisVersion": "6",
+        "publicNetworkAccess": "Disabled",
+        "subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.Network/virtualNetworks/my-vnet/subnets/redis-subnet",
+        "staticIP": "10.0.1.50",
+        "redisConfiguration": {
+          "maxmemory-policy": "volatile-lru",
+          "aad-enabled": "true"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redis/firewallRules",
+      "apiVersion": "2024-03-01",
+      "name": "my-vnet-cache/AllowAppSubnet",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', 'my-vnet-cache')]"
+      ],
+      "properties": {
+        "startIP": "10.0.2.0",
+        "endIP": "10.0.2.255"
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', 'my-vnet-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[reference('my-vnet-cache').hostName]"
+    }
+  }
+}

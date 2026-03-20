@@ -1,0 +1,113 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P2 VNet → AMR Balanced_B10 with Private Endpoint",
+    "_migratedFrom": "Premium P2 (13 GB) with VNet injection + firewall rules",
+    "_targetSkuInfo": "Balanced_B10 (comparable to Premium P2)",
+    "_changes": [
+      "Resource split: redis → redisEnterprise + databases + privateEndpoint + privateDnsZoneGroup",
+      "SKU: Premium/P/2 → Balanced_B10",
+      "Networking: VNet injection (subnetId) → Private Endpoint resource",
+      "Networking: Firewall rules removed (use NSG on PE subnet instead)",
+      "DNS: privatelink.redis.azure.net (AMR private link zone)",
+      "Removed: subnetId, staticIP, enableNonSslPort, shardCount",
+      "Preserved: publicNetworkAccess Disabled (carried from source)",
+      "PE groupIds: redisEnterprise (NOT redisCache)"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-07-01",
+      "name": "my-vnet-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "InternalAPI"
+      },
+      "sku": {
+        "name": "Balanced_B10"
+      },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Disabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-07-01",
+      "name": "my-vnet-cache/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-vnet-cache')]"
+      ],
+      "properties": {
+        "clientProtocol": "Encrypted",
+        "port": 10000,
+        "evictionPolicy": "VolatileLRU",
+        "clusteringPolicy": "EnterpriseCluster"
+      }
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2023-11-01",
+      "name": "my-vnet-cache-pe",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "InternalAPI"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-vnet-cache')]"
+      ],
+      "properties": {
+        "subnet": {
+          "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.Network/virtualNetworks/my-vnet/subnets/pe-subnet"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "my-vnet-cache-pe-conn",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-vnet-cache')]",
+              "groupIds": [
+                "redisEnterprise"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2023-11-01",
+      "name": "my-vnet-cache-pe/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', 'my-vnet-cache-pe')]"
+      ],
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "privatelink-redis-azure-net",
+            "properties": {
+              "privateDnsZoneId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.Network/privateDnsZones/privatelink.redis.azure.net"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-vnet-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[concat('my-vnet-cache', '.westus2.redis.azure.net')]"
+    },
+    "privateEndpointId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/privateEndpoints', 'my-vnet-cache-pe')]"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P1 non-clustered → AMR Balanced_B5",
+    "_migratedFrom": "Premium P1 (6 GB), shardCount=0",
+    "_targetSkuInfo": "Balanced_B5 (comparable to Premium P1)",
+    "_changes": [
+      "Resource split: redis → redisEnterprise + databases",
+      "SKU: Premium/P/1 → Balanced_B5",
+      "Eviction: volatile-lru → VolatileLRU",
+      "Clustering: EnterpriseCluster (source was non-clustered)",
+      "Zones: REMOVED — AMR manages zone redundancy automatically",
+      "Removed: shardCount, enableNonSslPort, redisVersion, aad-enabled"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-07-01",
+      "name": "my-premium-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "OrderService"
+      },
+      "sku": {
+        "name": "Balanced_B5"
+      },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-07-01",
+      "name": "my-premium-cache/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-premium-cache')]"
+      ],
+      "properties": {
+        "clientProtocol": "Encrypted",
+        "port": 10000,
+        "evictionPolicy": "VolatileLRU",
+        "clusteringPolicy": "EnterpriseCluster"
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-premium-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[concat('my-premium-cache', '.westus2.redis.azure.net')]"
+    }
+  }
+}

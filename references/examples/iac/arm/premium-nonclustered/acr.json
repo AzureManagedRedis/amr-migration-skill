@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P1 non-clustered — simple Premium with zones, no persistence or VNet",
+    "_sourceSkuInfo": "Premium P1 (6 GB)"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "my-premium-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "OrderService"
+      },
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "properties": {
+        "sku": {
+          "name": "Premium",
+          "family": "P",
+          "capacity": 1
+        },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "redisVersion": "6",
+        "publicNetworkAccess": "Enabled",
+        "redisConfiguration": {
+          "maxmemory-policy": "volatile-lru",
+          "aad-enabled": "true"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', 'my-premium-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[reference('my-premium-cache').hostName]"
+    }
+  }
+}

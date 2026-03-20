@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migrationSource": "Migrated from ACR Premium P1 + VNet injection parameters",
+    "_removedParams": [
+      "enableNonSslPort — AMR is TLS-only",
+      "redisVersion — AMR runs Redis 7.4+",
+      "skuName/skuFamily/skuCapacity — replaced by amrSkuName",
+      "subnetId — VNet injection not supported, replaced by privateEndpointSubnetId",
+      "staticIP — not applicable with Private Endpoint",
+      "maxmemoryReserved — AMR manages memory internally",
+      "maxfragmentationmemoryReserved — AMR manages memory internally",
+      "aadEnabled — AMR uses Entra ID natively",
+      "firewallRules — not supported in AMR, use Private Endpoint + NSG"
+    ],
+    "_networkingNote": "VNet injection (subnetId) converted to Private Endpoint. The privateEndpointSubnetId should be a subnet in the same VNet or a peered VNet. A Private DNS Zone for privatelink.redis.azure.net must exist and be linked to the VNet."
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "payments-cache-prod-westus2"
+    },
+    "location": {
+      "value": "westus2"
+    },
+    "amrSkuName": {
+      "value": "Balanced_B5"
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "publicNetworkAccess": {
+      "value": "Disabled"
+    },
+    "privateEndpointSubnetId": {
+      "value": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-networking/providers/Microsoft.Network/virtualNetworks/vnet-prod/subnets/snet-pe"
+    },
+    "privateDnsZoneId": {
+      "value": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-dns/providers/Microsoft.Network/privateDnsZones/privatelink.redis.azure.net"
+    },
+    "clusteringPolicy": {
+      "value": "EnterpriseCluster"
+    },
+    "evictionPolicy": {
+      "value": "VolatileLRU"
+    },
+    "clientProtocol": {
+      "value": "Encrypted"
+    },
+    "port": {
+      "value": 10000
+    },
+    "tags": {
+      "value": {
+        "Environment": "Production",
+        "Service": "Payments",
+        "Compliance": "PCI-DSS",
+        "CostCenter": "CC-5500"
+      }
+    }
+  }
+}

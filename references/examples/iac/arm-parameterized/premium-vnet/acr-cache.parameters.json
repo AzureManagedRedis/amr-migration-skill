@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "redisCacheName": {
+      "value": "payments-cache-prod-westus2"
+    },
+    "location": {
+      "value": "westus2"
+    },
+    "skuName": {
+      "value": "Premium"
+    },
+    "skuFamily": {
+      "value": "P"
+    },
+    "skuCapacity": {
+      "value": 1
+    },
+    "enableNonSslPort": {
+      "value": false
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "publicNetworkAccess": {
+      "value": "Disabled"
+    },
+    "subnetId": {
+      "value": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-networking/providers/Microsoft.Network/virtualNetworks/vnet-prod/subnets/snet-redis"
+    },
+    "staticIP": {
+      "value": "10.2.3.50"
+    },
+    "maxmemoryPolicy": {
+      "value": "volatile-lru"
+    },
+    "maxmemoryReserved": {
+      "value": "300"
+    },
+    "maxfragmentationmemoryReserved": {
+      "value": "300"
+    },
+    "aadEnabled": {
+      "value": true
+    },
+    "firewallRules": {
+      "value": [
+        { "name": "AllowPaymentService", "startIP": "10.2.1.0", "endIP": "10.2.1.255" }
+      ]
+    },
+    "zones": {
+      "value": ["1", "2", "3"]
+    },
+    "tags": {
+      "value": {
+        "Environment": "Production",
+        "Service": "Payments",
+        "Compliance": "PCI-DSS",
+        "CostCenter": "CC-5500"
+      }
+    }
+  }
+}

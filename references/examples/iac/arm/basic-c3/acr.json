@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Basic C3 — simplest ACR cache, no special features",
+    "_sourceSkuInfo": "Basic C3 (6 GB)"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "my-basic-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "WebApp"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "sku": {
+          "name": "Basic",
+          "family": "C",
+          "capacity": 3
+        },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "redisVersion": "6",
+        "publicNetworkAccess": "Enabled",
+        "redisConfiguration": {
+          "maxmemory-policy": "noeviction",
+          "aad-enabled": "true"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', 'my-basic-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[reference('my-basic-cache').hostName]"
+    }
+  }
+}

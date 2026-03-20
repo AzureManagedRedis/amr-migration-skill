@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P2 x3 shards → AMR Balanced_B50 with OSSCluster",
+    "_migratedFrom": "Premium P2 (13 GB) x 3 shards with RDB persistence",
+    "_targetSkuInfo": "Balanced_B50 (comparable memory to P2 x 3 shards)",
+    "_changes": [
+      "Resource split: redis → redisEnterprise + databases",
+      "SKU: Premium/P/2 x 3 shards → Balanced_B50",
+      "Clustering: OSSCluster (source had shardCount=3, assumes cluster-aware clients)",
+      "Eviction: volatile-lru → VolatileLRU",
+      "Persistence: rdb-backup-frequency 60 min → rdbFrequency 1h",
+      "Persistence: storage connection + auth method removed (AMR manages internally)",
+      "Identity: preserved (type + userAssignedIdentities, not principalId/tenantId)",
+      "Zones: REMOVED — AMR manages zone redundancy automatically",
+      "Removed: shardCount, enableNonSslPort, redisVersion, maxmemory-reserved, maxfragmentationmemory-reserved"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-07-01",
+      "name": "my-clustered-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "SessionStore"
+      },
+      "identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-persistence": {}
+        }
+      },
+      "sku": {
+        "name": "Balanced_B50"
+      },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-07-01",
+      "name": "my-clustered-cache/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-clustered-cache')]"
+      ],
+      "properties": {
+        "clientProtocol": "Encrypted",
+        "port": 10000,
+        "evictionPolicy": "VolatileLRU",
+        "clusteringPolicy": "OSSCluster",
+        "persistence": {
+          "rdbEnabled": true,
+          "rdbFrequency": "1h"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-clustered-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[concat('my-clustered-cache', '.westus2.redis.azure.net')]"
+    }
+  }
+}
