@@ -92,6 +92,22 @@ Tools:
 **Pros**: Full control, customizable  
 **Cons**: Requires setup, development effort
 
+### Option 5: Automated Migration via ARM REST API (Preview)
+**Best for**: Automated DNS switching, minimal client changes, supported cache configurations
+
+Uses Azure's built-in migration API to automatically validate compatibility, switch DNS, and forward ports. The old ACR endpoint is re-routed to the new AMR cache transparently.
+
+1. Create target AMR cache (same region as source)
+2. Run **Validate** to check compatibility
+3. Run **Migrate** to trigger DNS switch and port forwarding
+4. Verify client connectivity on old endpoint → now routed to AMR
+5. If issues arise, **Cancel** to rollback
+
+See [SKILL.md — Automated Migration section](../SKILL.md#automated-migration-arm-rest-api) for full usage, supported scope, and the PowerShell utility script.
+
+**Pros**: Automated DNS switch, no client connection string changes, rollback support  
+**Cons**: Preview — limited scope (no Private Link, VNet, or geo-replicated caches); data migration not yet included
+
 ---
 
 ## AMR Performance Tiers

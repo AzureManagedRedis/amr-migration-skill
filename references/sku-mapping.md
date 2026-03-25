@@ -2,7 +2,7 @@
 
 This guide helps you select the appropriate Azure Managed Redis (AMR) SKU when migrating from Azure Cache for Redis.
 
-> **Source**: Internal SKU mapping spreadsheet (ACR_AMR.xlsx)
+> **Source**: ACR → AMR SKU mapping data
 > 
 > **Last Updated**: February 2026
 

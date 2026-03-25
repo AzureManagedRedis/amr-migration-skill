@@ -67,6 +67,13 @@ fi
 echo "Token acquired successfully."
 echo ""
 
+# Detect shard count for clustered Premium caches
+# Use -o json | tail -1 to handle noisy stdout from cross-platform az CLI (e.g., WSL proxying to Windows)
+SHARD_COUNT=$(az redis show -n "$CACHE_NAME" -g "$RESOURCE_GROUP" --subscription "$SUBSCRIPTION" --query "shardCount" -o json 2>/dev/null | tail -1 | tr -d '[:space:]')
+if [ -z "$SHARD_COUNT" ] || [ "$SHARD_COUNT" = "null" ]; then
+    SHARD_COUNT=0
+fi
+
 # Build the metrics API URL
 RESOURCE_URI="/subscriptions/${SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Cache/Redis/${CACHE_NAME}"
 METRICS="usedmemoryRss,serverLoad,connectedclients,cacheRead,cacheWrite"
@@ -76,11 +83,16 @@ API_VERSION="2023-10-01"
 
 URL="https://management.azure.com${RESOURCE_URI}/providers/microsoft.insights/metrics?api-version=${API_VERSION}&metricnames=${METRICS}&timespan=${TIMESPAN}&interval=${INTERVAL}&aggregation=Maximum,Average"
 
+# For clustered caches, request per-shard metrics so we can aggregate correctly
+if [ "$SHARD_COUNT" -gt 1 ] 2>/dev/null; then
+    URL="${URL}&\$filter=ShardId%20eq%20'*'"
+fi
+
 echo "Querying metrics..."
 echo ""
 
-# Make the API call
-RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" "$URL")
+# Make the API call (--globoff prevents curl from interpreting [] and * as globs)
+RESPONSE=$(curl -s --globoff -H "Authorization: Bearer $TOKEN" "$URL")
 
 # Check for errors
 if echo "$RESPONSE" | grep -q '"code":'; then
@@ -96,6 +108,7 @@ echo "------------------------------------------------------------"
 # Parse JSON using python3 (available on most Linux/Mac systems)
 echo "$RESPONSE" | python3 -c "
 import sys, json, math
+from collections import defaultdict
 
 def percentile95(values):
     if not values:
@@ -118,26 +131,61 @@ def format_value(name, unit, val):
     else:
         return f'{val:,.0f}'
 
+# Metrics where per-shard values should be summed (additive).
+# All others use max (bottleneck/per-shard value).
+SUM_METRICS = {'usedmemoryRss', 'cacheRead', 'cacheWrite'}
+
+def aggregate_shard_timeseries(timeseries_list, metric_id):
+    \"\"\"Aggregate per-shard timeseries into combined data points.\"\"\"
+    if len(timeseries_list) <= 1:
+        if timeseries_list:
+            return timeseries_list[0].get('data', [])
+        return []
+
+    use_sum = metric_id in SUM_METRICS
+    by_ts = defaultdict(list)
+    for ts in timeseries_list:
+        for point in ts.get('data', []):
+            by_ts[point.get('timeStamp', '')].append(point)
+
+    aggregated = []
+    for ts_key, points in by_ts.items():
+        max_vals = [p['maximum'] for p in points if p.get('maximum') is not None]
+        avg_vals = [p['average'] for p in points if p.get('average') is not None]
+        if use_sum:
+            agg_max = sum(max_vals) if max_vals else None
+            agg_avg = sum(avg_vals) if avg_vals else None
+        else:
+            agg_max = max(max_vals) if max_vals else None
+            agg_avg = max(avg_vals) if avg_vals else None
+        aggregated.append({'maximum': agg_max, 'average': agg_avg})
+    return aggregated
+
 data = json.load(sys.stdin)
 
+# Detect shard count
+shard_count = 0
+for metric in data.get('value', []):
+    ts_count = len(metric.get('timeseries', []))
+    if ts_count > 1:
+        shard_count = ts_count
+        break
+
 print()
+if shard_count > 1:
+    print(f'Clustered Cache: {shard_count} shards detected - metrics aggregated across all shards')
 print(f\"{'Metric':<30} {'Peak':>35} {'P95':>35} {'Average':>35}\")
 print(f\"{'------':<30} {'----':>35} {'---':>35} {'-------':>35}\")
 
 for metric in data.get('value', []):
     name = metric['name']['localizedValue']
+    metric_id = metric['name']['value']
     unit = metric.get('unit', '')
 
-    max_vals = []
-    avg_vals = []
-    for ts in metric.get('timeseries', []):
-        for point in ts.get('data', []):
-            v = point.get('maximum')
-            if v is not None:
-                max_vals.append(v)
-            v = point.get('average')
-            if v is not None:
-                avg_vals.append(v)
+    data_points = aggregate_shard_timeseries(metric.get('timeseries', []), metric_id)
+
+    max_vals = [p['maximum'] for p in data_points if p.get('maximum') is not None]
+    avg_vals = [p['average'] for p in data_points if p.get('average') is not None]
 
     peak = max(max_vals) if max_vals else None
     p95 = percentile95(max_vals)

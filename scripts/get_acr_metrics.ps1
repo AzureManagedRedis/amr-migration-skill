@@ -51,6 +51,15 @@ try {
 Write-Host "Token acquired successfully."
 Write-Host ""
 
+# Detect shard count for clustered Premium caches
+$shardCount = 0
+try {
+    $shardInfo = az redis show -n $CacheName -g $ResourceGroup --subscription $SubscriptionId --query "shardCount" -o tsv 2>$null
+    if ($shardInfo -and $shardInfo -ne "null" -and $shardInfo -ne "") {
+        $shardCount = [int]$shardInfo
+    }
+} catch { }
+
 # Build the metrics API URL
 $resourceUri = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Cache/Redis/$CacheName"
 $metrics = "usedmemoryRss,serverLoad,connectedclients,cacheRead,cacheWrite"
@@ -59,6 +68,11 @@ $interval = "PT1H"  # 1 hour intervals for P95 calculation
 $apiVersion = "2023-10-01"
 
 $url = "https://management.azure.com${resourceUri}/providers/microsoft.insights/metrics?api-version=${apiVersion}&metricnames=${metrics}&timespan=${timespan}&interval=${interval}&aggregation=Maximum,Average"
+
+# For clustered caches, request per-shard metrics so we can aggregate correctly
+if ($shardCount -gt 1) {
+    $url += "&`$filter=ShardId eq '*'"
+}
 
 Write-Host "Querying metrics..."
 Write-Host ""
@@ -91,6 +105,67 @@ function Get-Percentile95 {
     return $sorted[$index]
 }
 
+# Helper: determine how to aggregate per-shard values for each metric
+# Sum: total across shards (memory, bandwidth)
+# Max: bottleneck/per-shard value (server load, connected clients)
+function Get-ShardAggregation {
+    param([string]$MetricId)
+    switch ($MetricId) {
+        "usedmemoryRss" { return "Sum" }
+        "cacheRead"     { return "Sum" }
+        "cacheWrite"    { return "Sum" }
+        default         { return "Max" }
+    }
+}
+
+# Helper: aggregate per-shard timeseries into a single set of data points
+function Merge-ShardTimeseries {
+    param(
+        [array]$Timeseries,
+        [string]$AggregationType
+    )
+
+    if ($Timeseries.Count -le 1) {
+        if ($Timeseries.Count -eq 1) { return $Timeseries[0].data }
+        return @()
+    }
+
+    # Group data points by timestamp across all shards
+    $byTimestamp = @{}
+    foreach ($ts in $Timeseries) {
+        foreach ($point in $ts.data) {
+            $key = $point.timeStamp
+            if (-not $byTimestamp.ContainsKey($key)) {
+                $byTimestamp[$key] = @()
+            }
+            $byTimestamp[$key] += $point
+        }
+    }
+
+    # Aggregate per timestamp
+    $aggregated = @()
+    foreach ($key in $byTimestamp.Keys) {
+        $points = $byTimestamp[$key]
+        $maxVals = @($points | ForEach-Object { $_.maximum } | Where-Object { $null -ne $_ })
+        $avgVals = @($points | ForEach-Object { $_.average } | Where-Object { $null -ne $_ })
+
+        if ($AggregationType -eq "Sum") {
+            $aggMax = if ($maxVals.Count -gt 0) { ($maxVals | Measure-Object -Sum).Sum } else { $null }
+            $aggAvg = if ($avgVals.Count -gt 0) { ($avgVals | Measure-Object -Sum).Sum } else { $null }
+        } else {
+            $aggMax = if ($maxVals.Count -gt 0) { ($maxVals | Measure-Object -Maximum).Maximum } else { $null }
+            $aggAvg = if ($avgVals.Count -gt 0) { ($avgVals | Measure-Object -Maximum).Maximum } else { $null }
+        }
+
+        $aggregated += [PSCustomObject]@{
+            maximum = $aggMax
+            average = $aggAvg
+        }
+    }
+
+    return $aggregated
+}
+
 # Helper: format a value based on metric name/unit
 function Format-Value {
     param([string]$Name, [string]$Unit, $Value)
@@ -113,9 +188,21 @@ function Format-Value {
     }
 }
 
+# Detect shard count from first metric with multiple timeseries
+$shardCount = 0
+foreach ($metric in $response.value) {
+    if ($metric.timeseries.Count -gt 1) {
+        $shardCount = $metric.timeseries.Count
+        break
+    }
+}
+
 # Display results
 Write-Host "------------------------------------------------------------"
 Write-Host ("METRICS RESULTS (over last {0} days)" -f $Days)
+if ($shardCount -gt 1) {
+    Write-Host ("Clustered Cache: {0} shards detected - metrics aggregated across all shards" -f $shardCount)
+}
 Write-Host "------------------------------------------------------------"
 Write-Host ""
 Write-Host ("{0,-30} {1,35} {2,35} {3,35}" -f "Metric", "Peak", "P95", "Average")
@@ -123,16 +210,19 @@ Write-Host ("{0,-30} {1,35} {2,35} {3,35}" -f "------", "----", "---", "-------"
 
 foreach ($metric in $response.value) {
     $name = $metric.name.localizedValue
+    $metricId = $metric.name.value
     $unit = $metric.unit
 
-    # Collect hourly data points
+    # Aggregate per-shard timeseries into combined data points
+    $aggType = Get-ShardAggregation -MetricId $metricId
+    $dataPoints = Merge-ShardTimeseries -Timeseries $metric.timeseries -AggregationType $aggType
+
+    # Collect aggregated hourly data points
     $maxValues = @()
     $avgValues = @()
-    foreach ($ts in $metric.timeseries) {
-        foreach ($point in $ts.data) {
-            if ($null -ne $point.maximum) { $maxValues += $point.maximum }
-            if ($null -ne $point.average) { $avgValues += $point.average }
-        }
+    foreach ($point in $dataPoints) {
+        if ($null -ne $point.maximum) { $maxValues += $point.maximum }
+        if ($null -ne $point.average) { $avgValues += $point.average }
     }
 
     $peak = if ($maxValues.Count -gt 0) { ($maxValues | Measure-Object -Maximum).Maximum } else { $null }
