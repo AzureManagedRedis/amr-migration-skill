@@ -36,6 +36,7 @@ Run the pricing scripts for both source and target SKUs to show the cost impact:
 Check [Feature Comparison](feature-comparison.md) for features that change or are removed in AMR. Key items to flag:
 - **Clustering policy decision**: If the source was non-clustered and the target AMR SKU ≤ 24GB (derivable from the SKU name), use non-clustered AMR automatically. For target sizes > 24GB, or if source was clustered with `shardCount ≥ 1`, ask whether the client is cluster-aware (determines `OSSCluster` vs `EnterpriseCluster`). See [AMR template structure §6](iac-amr-template-structure.md#6-clustering-policy-decision-matrix).
 - **Non-TLS port**: If source had `enableNonSslPort: true`, convert to `clientProtocol: "Plaintext"` in AMR (AMR supports non-TLS access)
+- **Access policy assignments**: Map ACR `Data Owner` / `Data Contributor` → AMR `default`. Flag `Data Reader` as needing a custom policy.
 - **VNet injection → Private Endpoint**: Source `subnetId` requires a PE resource in the output
 - **Geo-replication**: ACR `linkedServers` (passive) should be auto-converted to AMR active geo-replication (active-active model). The output supports writes on all linked caches. See [AMR template structure §7](iac-amr-template-structure.md#7-removed-properties).
 - **Eviction policy**: Convert ACR `maxmemory-policy` to AMR `evictionPolicy` (PascalCase). Do not remove — it maps directly.

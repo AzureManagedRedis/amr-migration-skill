@@ -9,10 +9,13 @@
 - [6. Clustering Policy Decision Matrix](#6-clustering-policy-decision-matrix)
 - [7. Removed Properties](#7-removed-properties)
 - [8. Networking: VNet Injection → Private Endpoint](#8-networking-vnet-injection--private-endpoint)
-- [9. Preserved Properties](#9-preserved-properties)
-- [10. Parameters File Transformation](#10-parameters-file-transformation)
-- [11. Variables and Outputs Cleanup](#11-variables-and-outputs-cleanup)
-- [12. Terraform Output Structure](#12-terraform-output-structure)
+- [9. Access Policy Assignment Transformation](#9-access-policy-assignment-transformation)
+- [10. Preserved Properties](#10-preserved-properties)
+- [11. Parameters File Transformation](#11-parameters-file-transformation)
+- [12. Variables and Outputs Cleanup](#12-variables-and-outputs-cleanup)
+- [13. Terraform Output Structure](#13-terraform-output-structure)
+- [14. Bicep Output Structure](#14-bicep-output-structure)
+- [15. Example Templates](#15-example-templates)
 - [13. Bicep Output Structure](#13-bicep-output-structure)
 - [14. Example Templates](#14-example-templates)
 
@@ -454,7 +457,52 @@ ACR firewall rules (`Microsoft.Cache/redis/firewallRules`) are **not supported**
 
 ---
 
-## 9. Preserved Properties
+## 9. Access Policy Assignment Transformation
+
+ACR uses `Microsoft.Cache/redis/accessPolicyAssignments` as child resources. AMR uses `Microsoft.Cache/redisEnterprise/databases/accessPolicyAssignments` — these are children of the **database**, not the cluster.
+
+### ACR Policy → AMR Policy Mapping
+
+| ACR Access Policy | AMR Access Policy | Notes |
+|---|---|---|
+| `Data Owner` | `default` | Full data access — maps to AMR's built-in `default` policy |
+| `Data Contributor` | `default` | Read/write data access — maps to `default` (AMR has no separate contributor role) |
+| `Data Reader` | ⚠️ No built-in equivalent | Flag for manual attention — user must create a custom access policy on AMR |
+
+### ARM JSON Output
+
+For each ACR `accessPolicyAssignment`, generate a corresponding AMR resource:
+
+```json
+{
+  "type": "Microsoft.Cache/redisEnterprise/databases/accessPolicyAssignments",
+  "apiVersion": "2025-04-01",
+  "name": "[concat(parameters('cacheName'), '/default/', parameters('accessPolicyAssignmentName'))]",
+  "dependsOn": [
+    "[resourceId('Microsoft.Cache/redisEnterprise/databases', parameters('cacheName'), 'default')]"
+  ],
+  "properties": {
+    "accessPolicyName": "default",
+    "user": {
+      "objectId": "<entra-object-id>"
+    }
+  }
+}
+```
+
+### Transformation Rules
+
+1. **Resource type**: `Microsoft.Cache/redis/accessPolicyAssignments` → `Microsoft.Cache/redisEnterprise/databases/accessPolicyAssignments`
+2. **Parent path**: Changes from `<cacheName>/<assignmentName>` to `<cacheName>/default/<assignmentName>` (AMR assignments are scoped to the database, which is named `default`)
+3. **`dependsOn`**: Must reference the AMR database resource, not the cluster
+4. **`accessPolicyName`**: Map using the table above. If the source policy is `Data Owner` or `Data Contributor`, set to `default`
+5. **`objectId`**: Preserve from source — the Entra object ID is unchanged
+6. **`objectIdAlias`** (display name): Not a property on AMR assignments — drop it
+7. **`Data Reader`**: If found, do NOT generate an AMR resource. Instead, add to the feature gaps report: _"ACR 'Data Reader' access policy for [display name] has no built-in AMR equivalent. Create a custom access policy on the AMR database after deployment."_
+
+---
+
+## 10. Preserved Properties
 
 These properties carry over from ACR to the AMR **cluster** resource unchanged:
 
@@ -471,7 +519,7 @@ These properties carry over from ACR to the AMR **cluster** resource unchanged:
 
 ---
 
-## 10. Parameters File Transformation
+## 11. Parameters File Transformation
 
 When transforming ARM template parameter definitions:
 
@@ -551,7 +599,7 @@ If a `skuName` parameter already exists, change its `defaultValue` from the ACR 
 
 ---
 
-## 11. Variables and Outputs Cleanup
+## 12. Variables and Outputs Cleanup
 
 ### Variables
 
@@ -583,7 +631,7 @@ If a `skuName` parameter already exists, change its `defaultValue` from the ACR 
 
 ---
 
-## 12. Terraform Output Structure
+## 13. Terraform Output Structure
 
 Use `azurerm_managed_redis` — the recommended resource for AMR (replaces the deprecated `azurerm_redis_enterprise_cluster` + `azurerm_redis_enterprise_database`). This single resource includes an inline `default_database` block for database configuration.
 
@@ -686,7 +734,7 @@ These ACR attributes do not exist on the AMR resource — remove or convert them
 
 ---
 
-## 13. Bicep Output Structure
+## 14. Bicep Output Structure
 
 Generate Bicep directly (preferred) rather than ARM JSON + decompile.
 
@@ -772,7 +820,7 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
 
 ---
 
-## 14. Example Templates
+## 15. Example Templates
 
 For complete before/after template examples, see [references/examples/iac/](examples/iac/):
 
