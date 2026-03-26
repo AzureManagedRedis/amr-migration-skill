@@ -164,7 +164,7 @@ For converting ACR templates (ARM, Bicep, Terraform) to AMR format, use these re
 | User Intent | Signal Phrases | Workflow |
 |---|---|---|
 | Move a live cache to AMR | "migrate cache", "move to AMR", "select SKU", "assess metrics", "migration strategy", "switch traffic" | **Migration Workflow** (Steps 1-4) |
-| Convert IaC templates to AMR format | "convert template", "Bicep migration", "ARM to AMR", "Terraform", "IaC", "template transformation", "region buildout" | **IaC Migration Workflow** (Steps 1-7) |
+| Convert IaC templates to AMR format | "convert template", "Bicep migration", "ARM to AMR", "Terraform", "IaC", "template transformation", "region buildout" | **IaC Migration Workflow** (Steps 1-8) |
 | Compare features or answer general questions | "compare ACR vs AMR", "feature compatibility", "retirement date", "best practices" | Answer directly using reference docs — no workflow needed |
 
 ### Ambiguous Requests
@@ -249,7 +249,7 @@ Use these values to:
 
 ## IaC Migration Workflow
 
-> For the full 7-step workflow, see [IaC Migration Workflow](references/iac-migration-workflow.md).
+> For the full 8-step workflow, see [IaC Migration Workflow](references/iac-migration-workflow.md).
 
 Converts ACR templates (ARM JSON, Bicep, Terraform) to AMR format using AI-driven transformation with reference docs for grounding. Includes SKU mapping, pricing comparison, feature gap analysis, customer confirmation gate, and template generation. Scripts are only used for pricing lookups.
 
