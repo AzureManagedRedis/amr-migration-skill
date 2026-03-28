@@ -217,7 +217,9 @@ while [[ $# -gt 0 ]]; do
         --track)
             TRACK_MIGRATION="true"; shift ;;
         --api-version)
-            API_VERSION="$2"; shift 2 ;;
+            API_VERSION="$2"
+            [[ "$API_VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}(-preview)?$ ]] || error_exit "Invalid API version format. Expected: YYYY-MM-DD or YYYY-MM-DD-preview"
+            shift 2 ;;
         --help|-h)
             show_help ;;
         *)
@@ -236,6 +238,9 @@ ACTION_LOWER="${ACTION,,}"
 
 if [[ "$ACTION_LOWER" == "migrate" || "$ACTION_LOWER" == "validate" ]]; then
     [[ -z "$SOURCE_RESOURCE_ID" ]] && error_exit "Source resource ID is required for '$ACTION'. Use --source <resourceId>."
+    # Validate source resource ID format
+    local_pattern='^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Cache/Redis/[^/]+$'
+    [[ "$SOURCE_RESOURCE_ID" =~ $local_pattern ]] || error_exit "SourceResourceId format is invalid. Expected: /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<name>"
 fi
 
 parse_target_resource_id "$TARGET_RESOURCE_ID"

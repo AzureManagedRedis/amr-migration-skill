@@ -15,17 +15,24 @@
 
 param(
     [Parameter(Mandatory=$true)]
+    [ValidatePattern('^[a-fA-F0-9-]+$')]
     [string]$SubscriptionId,
     
     [Parameter(Mandatory=$true)]
+    [ValidatePattern('^[a-zA-Z0-9._-]+$')]
     [string]$ResourceGroup,
     
     [Parameter(Mandatory=$true)]
+    [ValidatePattern('^[a-zA-Z0-9-]+$')]
     [string]$CacheName,
     
     [Parameter(Mandatory=$false)]
+    [ValidateRange(1, 30)]
     [int]$Days = 7
 )
+
+# Enforce TLS 1.2+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 Write-Host "============================================================"
 Write-Host "Azure Cache for Redis - Metrics Query"
@@ -58,7 +65,9 @@ try {
     if ($shardInfo -and $shardInfo -ne "null" -and $shardInfo -ne "") {
         $shardCount = [int]$shardInfo
     }
-} catch { }
+} catch {
+    Write-Warning "Could not detect shard count (non-clustered or access issue): $($_.Exception.Message)"
+}
 
 # Build the metrics API URL
 $resourceUri = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Cache/Redis/$CacheName"
@@ -85,8 +94,8 @@ $headers = @{
 try {
     $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get
 } catch {
-    Write-Host "ERROR: API request failed" -ForegroundColor Red
-    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host "ERROR: API request failed. Check credentials and resource parameters." -ForegroundColor Red
+    Write-Verbose $_.Exception.Message
     exit 1
 }
 
@@ -243,3 +252,6 @@ Write-Host "  - Server Load: High Server Load (>70%) with low memory suggests Co
 Write-Host "  - Connections: Check max connections supported by target SKU"
 Write-Host ""
 Write-Host "See references/sku-mapping.md for SKU selection guidance."
+
+# Clean up sensitive variables
+Remove-Variable -Name token, headers -ErrorAction SilentlyContinue

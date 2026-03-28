@@ -34,7 +34,7 @@
     This script requires the Az PowerShell module.
 #>
 
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 param
 (
     [Parameter()]
@@ -42,6 +42,7 @@ param
     [string] $Action,
 
     [Parameter()]
+    [ValidatePattern('^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Cache/Redis/[^/]+$')]
     [string] $SourceResourceId,
 
     [Parameter()]
@@ -51,17 +52,18 @@ param
     [bool] $ForceMigrate = $false,
 
     [Parameter()]
+    [ValidateSet("AzureCloud", "AzureChinaCloud", "AzureUSGovernment", "AzureGermanCloud")]
     [string] $Environment = "AzureCloud",
 
     [Parameter()]
     [switch] $TrackMigration = $false,
 
-    [Parameter(DontShow = $true)]
-    [string] $ArmApiVersion = "2025-08-01-preview",
-
     [Parameter()]
     [switch] $Help = $false
 )
+
+# ARM API version as internal constant (not user-configurable)
+$ArmApiVersion = "2025-08-01-preview"
 
 $ErrorActionPreference = "Stop"
 $currentScript = $MyInvocation.MyCommand.Source
@@ -153,13 +155,25 @@ function Print-Response(
         }
     }
 
-    Write-Host $response.Content
+    # Display response content with limited detail to avoid leaking internal metadata
+    if ($response.Content) {
+        try {
+            $parsed = $response.Content | ConvertFrom-Json
+            $parsed | ConvertTo-Json -Depth 3 | Write-Host
+        } catch {
+            Write-Verbose "Raw response: $($response.Content)"
+            Write-Host "(Response content available with -Verbose flag)"
+        }
+    }
 }
 
 switch ($Action)
 {
     "Migrate"
     {
+        if (-not $PSCmdlet.ShouldProcess("$SourceResourceId -> $TargetResourceId", "Migrate Redis cache (DNS switch enabled)")) {
+            return
+        }
         $payload = @{
             properties = @{
                 sourceResourceId  = $SourceResourceId;
@@ -206,6 +220,9 @@ switch ($Action)
 
     "Cancel"
     {
+        if (-not $PSCmdlet.ShouldProcess("$TargetResourceId", "Cancel Redis migration")) {
+            return
+        }
         if ($TrackMigration.IsPresent)
         {
             Write-Host "This command will trigger the cancellation and will track the long running operation until its completion."

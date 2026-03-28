@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Get Azure Cache for Redis metrics to help with AMR SKU selection
 # Usage: ./get_acr_metrics.sh <subscriptionId> <resourceGroup> <cacheName> [days]
 #
@@ -46,6 +47,13 @@ if [ -z "$SUBSCRIPTION" ] || [ -z "$RESOURCE_GROUP" ] || [ -z "$CACHE_NAME" ]; t
     usage
 fi
 
+# Input validation
+[[ "$SUBSCRIPTION" =~ ^[a-fA-F0-9-]+$ ]] || { echo "ERROR: Invalid subscription ID format."; exit 1; }
+[[ "$RESOURCE_GROUP" =~ ^[a-zA-Z0-9._-]+$ ]] || { echo "ERROR: Invalid resource group name format."; exit 1; }
+[[ "$CACHE_NAME" =~ ^[a-zA-Z0-9-]+$ ]] || { echo "ERROR: Invalid cache name format."; exit 1; }
+[[ "$DAYS" =~ ^[0-9]+$ ]] || { echo "ERROR: Days must be a positive integer."; exit 1; }
+[[ "$DAYS" -ge 1 && "$DAYS" -le 30 ]] || { echo "ERROR: Days must be between 1 and 30."; exit 1; }
+
 echo "============================================================"
 echo "Azure Cache for Redis - Metrics Query"
 echo "============================================================"
@@ -55,17 +63,12 @@ echo "Cache Name:     $CACHE_NAME"
 echo "Time Range:     Last $DAYS days"
 echo ""
 
-# Get access token using Azure CLI
-echo "Fetching access token..."
-TOKEN=$(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv 2>/dev/null)
-
+# Get access token using Azure CLI (|| true prevents set -e from aborting before our check)
+TOKEN=$(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv 2>/dev/null) || true
 if [ -z "$TOKEN" ]; then
     echo "ERROR: Failed to get access token. Please run 'az login' first."
     exit 1
 fi
-
-echo "Token acquired successfully."
-echo ""
 
 # Detect shard count for clustered Premium caches
 # Use -o json | tail -1 to handle noisy stdout from cross-platform az CLI (e.g., WSL proxying to Windows)
@@ -92,12 +95,19 @@ echo "Querying metrics..."
 echo ""
 
 # Make the API call (--globoff prevents curl from interpreting [] and * as globs)
-RESPONSE=$(curl -s --globoff -H "Authorization: Bearer $TOKEN" "$URL")
+# Token passed via stdin to avoid exposure in /proc/<pid>/cmdline
+HTTP_CODE=$(curl -s --globoff -o /tmp/acr_metrics_response.json -w "%{http_code}" -H @- "$URL" \
+    <<< "Authorization: Bearer $TOKEN")
+RESPONSE=$(cat /tmp/acr_metrics_response.json)
+rm -f /tmp/acr_metrics_response.json
+unset TOKEN
 
-# Check for errors
-if echo "$RESPONSE" | grep -q '"code":'; then
-    echo "ERROR: API request failed"
-    echo "$RESPONSE" | grep -o '"message":"[^"]*"'
+# Check for errors with specific messaging based on HTTP status
+if [[ "$HTTP_CODE" == "401" || "$HTTP_CODE" == "403" ]]; then
+    echo "ERROR: Authentication failed (HTTP $HTTP_CODE). Please run 'az login' first."
+    exit 1
+elif [[ "$HTTP_CODE" != "200" ]]; then
+    echo "ERROR: API request failed (HTTP $HTTP_CODE). Check resource parameters."
     exit 1
 fi
 
