@@ -38,6 +38,17 @@ Avoid using the term "shards" when describing AMR. In AMR, sharding is managed i
 
 ## Agent Guidance
 
+### ⛔ Destructive Operation Confirmation (Mandatory)
+Before executing **Migrate** or **Cancel** actions via the migration scripts, the agent **must**:
+1. Display the **full source and target resource IDs** to the user
+2. Clearly state the action being performed (e.g., "This will initiate a DNS switch migration from ACR to AMR")
+3. **Ask for explicit user confirmation** using the `ask_user` tool before running the script
+4. Never auto-confirm or assume consent for these operations
+
+This applies regardless of how the user phrased their request. Even if the user says "go ahead and migrate", the agent must confirm the specific resource IDs before executing.
+
+For the bash script, always pass `--yes` when the agent runs it (since the agent cannot interact with the terminal prompt), but only after obtaining user confirmation through the `ask_user` tool first.
+
 ### Version Check (manual only — triggered by user request)
 Do **not** check for updates automatically. Only perform a version check when the user explicitly asks (e.g., "check for updates for the amr skill", "is there a newer version of amr-migration-skill?").
 

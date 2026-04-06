@@ -105,10 +105,10 @@ No request body. Reverses the DNS switch and port forwarding. Takes ~5 minutes. 
 2. Check dependencies (`az`, `jq`)
 3. Parse `TargetResourceId` via bash regex (`=~`)
 4. Verify Azure CLI login via `az account show`, switch subscription if needed
-5. Build JSON payload with `jq -n` (avoids shell escaping issues)
-6. Write payload to temp file, call `az rest` with `--body @tempfile`
-7. If `--track` is set, enters a polling loop: calls GET Status every 30 seconds until a terminal state (`Succeeded`, `Failed`, `Canceled`) or timeout (30 minutes)
-8. Cleanup temp files on both success and failure paths
+5. **Confirm destructive actions** (Migrate, Cancel) with interactive prompt; skip with `--yes`
+6. Build JSON payload with `jq -n` (avoids shell escaping issues)
+7. Call `az rest` with `--body` containing the JSON payload
+8. If `--track` is set, enters a polling loop: calls GET Status every 30 seconds until a terminal state (`Succeeded`, `Failed`, `Canceled`) or timeout (30 minutes)
 
 **Key dependency**: Requires **Azure CLI** (`az`) and **jq**. Uses whichever Azure session `az login` established.
 
@@ -117,6 +117,7 @@ No request body. Reverses the DNS switch and port forwarding. Takes ~5 minutes. 
 | Behavior | PowerShell | Bash |
 |----------|-----------|------|
 | **Tracking completion** | Uses ARM LRO polling built into `Invoke-AzRestMethod -WaitForCompletion` (efficient, event-driven) | Manual polling every 30 seconds via GET Status (simple, bounded at 30 min) |
+| **Destructive action confirmation** | `SupportsShouldProcess` (`-WhatIf`/`-Confirm`) | Interactive prompt with `[y/N]`; skip with `--yes` |
 | **Error exit codes** | Throws PowerShell exceptions on failures (`$ErrorActionPreference = "Stop"`) | Returns non-zero exit codes; prints error to stderr |
 | **Response headers** | Displays `x-ms-request-id`, `x-ms-correlation-request-id`, `x-ms-operation-identifier` | Not displayed (limitation of `az rest` output) |
 | **JSON output** | Raw content string from `Invoke-AzRestMethod` response | Pretty-printed via `jq .` |

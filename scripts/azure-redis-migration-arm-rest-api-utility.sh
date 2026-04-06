@@ -25,7 +25,9 @@
 #   --target, -t          Target AMR resource ID (required for all actions)
 #   --force-migrate       Bypass validation warnings (default: false)
 #   --track               Wait for long-running operation to complete (default: false)
+#   --yes, -y             Skip confirmation prompt for destructive actions (Migrate, Cancel)
 #   --api-version         ARM API version (default: 2025-08-01-preview)
+#   --yes, -y             Skip confirmation prompt (for automation)
 #   --help, -h            Show this help message
 #
 # Examples:
@@ -68,6 +70,7 @@ SOURCE_RESOURCE_ID=""
 TARGET_RESOURCE_ID=""
 FORCE_MIGRATE="false"
 TRACK_MIGRATION="false"
+SKIP_CONFIRMATION="false"
 API_VERSION="2025-08-01-preview"
 
 # --- Colors (disabled when output is not a terminal) ---
@@ -103,6 +106,23 @@ success() {
 check_dependencies() {
     command -v az >/dev/null 2>&1 || error_exit "Azure CLI (az) is required but not installed. See https://learn.microsoft.com/cli/azure/install-azure-cli"
     command -v jq >/dev/null 2>&1 || error_exit "jq is required but not installed. See https://jqlang.github.io/jq/download/"
+}
+
+confirm_action() {
+    local action_desc="$1"
+    if [[ "$SKIP_CONFIRMATION" == "true" ]]; then
+        return 0
+    fi
+    if [[ ! -t 0 ]]; then
+        error_exit "Destructive action requires confirmation. Run with --yes to skip, or run interactively."
+    fi
+    echo -e "${CYAN}You are about to: ${action_desc}${NC}"
+    echo ""
+    read -rp "Are you sure you want to proceed? [y/N] " answer
+    case "$answer" in
+        [yY]|[yY][eE][sS]) return 0 ;;
+        *) echo "Aborted."; exit 0 ;;
+    esac
 }
 
 parse_target_resource_id() {
@@ -220,6 +240,8 @@ while [[ $# -gt 0 ]]; do
             API_VERSION="$2"
             [[ "$API_VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}(-preview)?$ ]] || error_exit "Invalid API version format. Expected: YYYY-MM-DD or YYYY-MM-DD-preview"
             shift 2 ;;
+        --yes|-y)
+            SKIP_CONFIRMATION="true"; shift ;;
         --help|-h)
             show_help ;;
         *)
@@ -262,6 +284,8 @@ case "$ACTION_LOWER" in
         ;;
 
     migrate)
+        confirm_action "Migrate cache (DNS switch): ${SOURCE_RESOURCE_ID} -> ${TARGET_RESOURCE_ID}"
+
         if [[ "$TRACK_MIGRATION" == "true" ]]; then
             info "Triggering migration and tracking until completion..."
         else
@@ -288,6 +312,8 @@ case "$ACTION_LOWER" in
         ;;
 
     cancel)
+        confirm_action "Cancel migration on: ${TARGET_RESOURCE_ID}"
+
         if [[ "$TRACK_MIGRATION" == "true" ]]; then
             info "Triggering migration cancellation and tracking until completion..."
         else
