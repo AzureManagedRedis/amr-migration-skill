@@ -94,12 +94,16 @@ fi
 echo "Querying metrics..."
 echo ""
 
+# Create a secure temp file and ensure cleanup on exit
+TMPFILE=$(mktemp /tmp/acr_metrics_XXXXXX.json)
+trap 'rm -f "$TMPFILE"' EXIT
+
 # Make the API call (--globoff prevents curl from interpreting [] and * as globs)
 # Token passed via stdin to avoid exposure in /proc/<pid>/cmdline
-HTTP_CODE=$(curl -s --globoff -o /tmp/acr_metrics_response.json -w "%{http_code}" -H @- "$URL" \
+HTTP_CODE=$(curl -s --globoff -o "$TMPFILE" -w "%{http_code}" -H @- "$URL" \
     <<< "Authorization: Bearer $TOKEN")
-RESPONSE=$(cat /tmp/acr_metrics_response.json)
-rm -f /tmp/acr_metrics_response.json
+RESPONSE=$(cat "$TMPFILE")
+rm -f "$TMPFILE"
 unset TOKEN
 
 # Check for errors with specific messaging based on HTTP status
