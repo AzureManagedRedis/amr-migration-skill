@@ -7,7 +7,7 @@
       "Resource split: Microsoft.Cache/redis → redisEnterprise cluster + databases/default",
       "SKU: Premium/P/1 → Balanced_B5 (6 GB, non-clustered = single shard equivalent)",
       "Eviction: volatile-ttl → VolatileTTL (PascalCase)",
-      "Clustering: EnterpriseCluster (shardCount=0 confirms non-clustered)",
+      "Clustering: Non-clustered (omitted — shardCount=0 confirms non-clustered, target ≤ 24GB)",
       "Port: 6380 → 10000, clientProtocol: Encrypted",
       "publicNetworkAccess: Disabled — preserved on cluster resource",
       "Removed params: enableNonSslPort, redisVersion, aadEnabled, skuName, skuFamily, skuCapacity, shardCount, replicasPerPrimary, maxmemoryReserved, maxfragmentationmemoryReserved",
@@ -40,12 +40,6 @@
       "defaultValue": "Disabled",
       "allowedValues": ["Enabled", "Disabled"],
       "metadata": { "description": "Public network access." }
-    },
-    "clusteringPolicy": {
-      "type": "string",
-      "defaultValue": "EnterpriseCluster",
-      "allowedValues": ["EnterpriseCluster", "OSSCluster"],
-      "metadata": { "description": "Clustering policy." }
     },
     "evictionPolicy": {
       "type": "string",
@@ -100,7 +94,6 @@
       "properties": {
         "clientProtocol": "[parameters('clientProtocol')]",
         "port": "[parameters('port')]",
-        "clusteringPolicy": "[parameters('clusteringPolicy')]",
         "evictionPolicy": "[parameters('evictionPolicy')]",
         "modules": []
       }

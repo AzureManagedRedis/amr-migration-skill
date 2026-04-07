@@ -9,7 +9,7 @@
       "Resource split: redis → redisEnterprise + databases",
       "SKU: Premium/P/1 → Balanced_B5",
       "Eviction: volatile-lru → VolatileLRU",
-      "Clustering: EnterpriseCluster (source was non-clustered)",
+      "Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)",
       "Zones: REMOVED — AMR manages zone redundancy automatically",
       "Removed: shardCount, enableNonSslPort, redisVersion, aad-enabled"
     ]
@@ -42,8 +42,7 @@
       "properties": {
         "clientProtocol": "Encrypted",
         "port": 10000,
-        "evictionPolicy": "VolatileLRU",
-        "clusteringPolicy": "EnterpriseCluster"
+        "evictionPolicy": "VolatileLRU"
       }
     }
   ],

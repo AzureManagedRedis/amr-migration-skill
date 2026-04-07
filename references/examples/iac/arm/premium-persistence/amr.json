@@ -50,7 +50,6 @@
         "clientProtocol": "Encrypted",
         "port": 10000,
         "evictionPolicy": "AllKeysLFU",
-        "clusteringPolicy": "EnterpriseCluster",
         "persistence": {
           "aofEnabled": true,
           "aofFrequency": "1s"

@@ -8,6 +8,7 @@
       "redisVersion — AMR runs Redis 7.4+",
       "skuName/skuFamily/skuCapacity — replaced by amrSkuName",
       "shardCount — AMR manages clustering internally",
+      "clusteringPolicy — non-clustered (source non-clustered, target ≤ 24GB)",
       "replicasPerPrimary — AMR manages HA internally",
       "maxmemoryReserved — AMR manages memory internally",
       "maxfragmentationmemoryReserved — AMR manages memory internally",
@@ -29,9 +30,6 @@
     },
     "publicNetworkAccess": {
       "value": "Disabled"
-    },
-    "clusteringPolicy": {
-      "value": "EnterpriseCluster"
     },
     "evictionPolicy": {
       "value": "VolatileTTL"

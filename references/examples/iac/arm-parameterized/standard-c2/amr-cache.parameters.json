@@ -7,7 +7,8 @@
       "enableNonSslPort — AMR is TLS-only",
       "redisVersion — AMR runs Redis 7.4+",
       "skuName/skuFamily/skuCapacity — replaced by amrSkuName",
-      "aadEnabled — AMR uses Entra ID natively"
+      "aadEnabled — AMR uses Entra ID natively",
+      "clusteringPolicy — non-clustered (source non-clustered, target ≤ 24GB)"
     ]
   },
   "parameters": {
@@ -25,9 +26,6 @@
     },
     "publicNetworkAccess": {
       "value": "Enabled"
-    },
-    "clusteringPolicy": {
-      "value": "EnterpriseCluster"
     },
     "evictionPolicy": {
       "value": "AllKeysLRU"

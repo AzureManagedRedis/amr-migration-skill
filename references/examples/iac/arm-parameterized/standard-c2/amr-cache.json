@@ -7,10 +7,10 @@
       "Resource split: Microsoft.Cache/redis → redisEnterprise cluster + databases/default",
       "SKU: Standard/C/2 → Balanced_B5",
       "Eviction: allkeys-lru → AllKeysLRU (PascalCase)",
-      "Clustering: EnterpriseCluster (non-clustered source)",
+      "Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)",
       "Port: 6380 → 10000, clientProtocol: Encrypted",
-      "Removed params: enableNonSslPort, redisVersion, aadEnabled, skuName, skuFamily, skuCapacity",
-      "Added params: amrSkuName, clusteringPolicy, evictionPolicy, clientProtocol, port",
+      "Removed params: enableNonSslPort, redisVersion, aadEnabled, skuName, skuFamily, skuCapacity, clusteringPolicy",
+      "Added params: amrSkuName, evictionPolicy, clientProtocol, port",
       "Preserved: name, location, tags, identity, minimumTlsVersion, publicNetworkAccess",
       "No Premium features in source — clean conversion, no persistence/VNet/zones/firewall"
     ]
@@ -40,12 +40,6 @@
       "defaultValue": "Enabled",
       "allowedValues": ["Enabled", "Disabled"],
       "metadata": { "description": "Public network access." }
-    },
-    "clusteringPolicy": {
-      "type": "string",
-      "defaultValue": "EnterpriseCluster",
-      "allowedValues": ["EnterpriseCluster", "OSSCluster"],
-      "metadata": { "description": "Clustering policy." }
     },
     "evictionPolicy": {
       "type": "string",
@@ -100,7 +94,6 @@
       "properties": {
         "clientProtocol": "[parameters('clientProtocol')]",
         "port": "[parameters('port')]",
-        "clusteringPolicy": "[parameters('clusteringPolicy')]",
         "evictionPolicy": "[parameters('evictionPolicy')]",
         "modules": []
       }

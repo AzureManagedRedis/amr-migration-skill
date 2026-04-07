@@ -14,7 +14,7 @@
       "Firewall rules: REMOVED — not supported in AMR, use Private Endpoint + NSG",
       "Port: 6380 → 10000, clientProtocol: Encrypted",
       "Removed params: enableNonSslPort, redisVersion, aadEnabled, skuName, skuFamily, skuCapacity, subnetId, staticIP, maxmemoryReserved, maxfragmentationmemoryReserved, firewallRules",
-      "Added params: amrSkuName, privateEndpointSubnetId, privateDnsZoneId, clusteringPolicy, evictionPolicy, clientProtocol, port",
+      "Added params: amrSkuName, privateEndpointSubnetId, privateDnsZoneId, evictionPolicy, clientProtocol, port",
       "Preserved: name, location, tags, identity, minimumTlsVersion, publicNetworkAccess (Disabled)",
       "Zones: REMOVED — AMR manages zone redundancy automatically"
     ]
@@ -53,12 +53,6 @@
       "type": "string",
       "defaultValue": "",
       "metadata": { "description": "Private DNS Zone resource ID for privatelink.redis.azure.net." }
-    },
-    "clusteringPolicy": {
-      "type": "string",
-      "defaultValue": "EnterpriseCluster",
-      "allowedValues": ["EnterpriseCluster", "OSSCluster"],
-      "metadata": { "description": "Clustering policy." }
     },
     "evictionPolicy": {
       "type": "string",
@@ -113,7 +107,6 @@
       "properties": {
         "clientProtocol": "[parameters('clientProtocol')]",
         "port": "[parameters('port')]",
-        "clusteringPolicy": "[parameters('clusteringPolicy')]",
         "evictionPolicy": "[parameters('evictionPolicy')]",
         "modules": []
       }

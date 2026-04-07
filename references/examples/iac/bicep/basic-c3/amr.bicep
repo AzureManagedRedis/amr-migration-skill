@@ -3,7 +3,7 @@
 //   - Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases
 //   - SKU: Basic/C/3 → Balanced_B5
 //   - Eviction: noeviction → NoEviction (PascalCase)
-//   - Clustering: EnterpriseCluster (default for non-clustered source)
+//   - Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)
 //   - Port: 6380 → 10000
 //   - publicNetworkAccess: Required in 2025-07-01, set to 'Enabled'
 //   - Removed: enableNonSslPort, redisVersion, redisConfiguration
@@ -36,7 +36,6 @@ resource redisDatabase 'Microsoft.Cache/redisEnterprise/databases@2025-07-01' = 
     clientProtocol: 'Encrypted'
     port: 10000
     evictionPolicy: 'NoEviction'
-    clusteringPolicy: 'EnterpriseCluster'
   }
 }
 

@@ -29,7 +29,7 @@ Source/expected files are organized under `references/examples/iac/` by format:
 **Database properties:**
 - [ ] `clientProtocol: "Encrypted"`, `port: 10000`
 - [ ] Eviction policy converted to PascalCase
-- [ ] Clustering policy explicitly set (`EnterpriseCluster` or `OSSCluster`)
+- [ ] Clustering policy: Omit `clusteringPolicy` if non-clustered source and target ≤ 24GB; otherwise set to `EnterpriseCluster` or `OSSCluster`
 
 **Workflow:**
 - [ ] Confirmation gate presented before generating template
@@ -62,6 +62,7 @@ These use hardcoded values (no parameters file).
 
 **Validations:**
 - [ ] SKU → `Balanced_B5`
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
 - [ ] Eviction: `noeviction` → `NoEviction`
 - [ ] Removes `enableNonSslPort`, `redisVersion`, `aad-enabled`
 - [ ] `publicNetworkAccess: "Enabled"` on cluster (source was `Enabled`)
@@ -81,7 +82,7 @@ These use hardcoded values (no parameters file).
 
 **Validations:**
 - [ ] SKU → `Balanced_B5`
-- [ ] Clustering: `EnterpriseCluster` (shardCount=0 means non-clustered — omit from output)
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source shardCount=0, target 6GB ≤ 24GB)
 - [ ] `publicNetworkAccess: "Enabled"` on cluster resource
 - [ ] Source zones `["1","2","3"]` NOT carried to AMR output (auto-managed)
 - [ ] No persistence or VNet resources generated
@@ -117,6 +118,7 @@ These use hardcoded values (no parameters file).
 
 **Validations:**
 - [ ] SKU → `Balanced_B10` (Premium P2 = 13 GB)
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source shardCount=0, target 13GB ≤ 24GB)
 - [ ] VNet injection → Private Endpoint resource generated
 - [ ] `subnetId` removed from cache, used for Private Endpoint subnet
 - [ ] `staticIP` removed (not applicable with Private Endpoint)
@@ -139,6 +141,7 @@ These use hardcoded values (no parameters file).
 
 **Validations:**
 - [ ] SKU → `Balanced_B10` (Premium P2 = 13 GB)
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 13GB ≤ 24GB)
 - [ ] Eviction: `allkeys-lfu` → `AllKeysLFU`
 - [ ] AOF: → `aofEnabled: true`, `aofFrequency: "1s"` on database persistence
 - [ ] `aof-storage-connection-string-0` removed
@@ -184,6 +187,7 @@ These have separate template + parameters files. The AI must read **both** files
 **Validations:**
 - [ ] Reads parameters file to determine actual SKU (Standard C2, not Premium default)
 - [ ] SKU → `Balanced_B5`
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
 - [ ] Eviction: `allkeys-lru` → `AllKeysLRU`
 - [ ] Outputs **both** template + parameters files
 - [ ] No Premium-only params in output (no persistence, VNet, shardCount)
@@ -205,6 +209,7 @@ These have separate template + parameters files. The AI must read **both** files
 **Validations:**
 - [ ] Reads `shardCount: 0` from params → confirms non-clustered
 - [ ] SKU → `Balanced_B5` (not B50 — no shards)
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source shardCount=0, target 6GB ≤ 24GB)
 - [ ] `publicNetworkAccess: "Disabled"` preserved in output params
 - [ ] Eviction: `volatile-ttl` → `VolatileTTL`
 - [ ] `maxmemoryReserved` and `maxfragmentationmemoryReserved` removed from output params
@@ -225,6 +230,7 @@ These have separate template + parameters files. The AI must read **both** files
 
 **Validations:**
 - [ ] `subnetId` param → replaced by `privateEndpointSubnetId` param
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
 - [ ] `staticIP` param removed entirely
 - [ ] `firewallRules` param removed with warning
 - [ ] Private Endpoint resource generated in template
@@ -275,6 +281,7 @@ These have separate template + parameters files. The AI must read **both** files
 - [ ] Uses Bicep resource declaration syntax
 - [ ] Proper parent/child relationship for database resource
 - [ ] All property transformations match ARM equivalents
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
 
 ---
 
@@ -306,7 +313,7 @@ These have separate template + parameters files. The AI must read **both** files
 - [ ] Resource type: `azurerm_redis_cache` → `azurerm_managed_redis` (single resource)
 - [ ] SKU → `Balanced_B5`
 - [ ] Eviction: `noeviction` → `NoEviction`
-- [ ] Clustering: `EnterpriseCluster`
+- [ ] Clustering: Non-clustered (omit `clustering_policy` — source non-clustered, target 6GB ≤ 24GB)
 - [ ] Identity preserved (SystemAssigned) via `identity` block
 - [ ] Database config in `default_database` inline block (not separate resource)
 - [ ] Removed: `enable_non_ssl_port`, `redis_version`, `redis_configuration` block, `minimum_tls_version`
@@ -334,6 +341,66 @@ These have separate template + parameters files. The AI must read **both** files
 
 ---
 
+## Edge Case Tests
+
+### TC-15: Standard C2 + enableNonSslPort (Non-TLS)
+
+| Field | Value |
+|---|---|
+| **Source** | `arm/standard-nontls/acr.json` |
+| **Expected** | `arm/standard-nontls/amr.json` |
+| **ACR Config** | Standard C2 (6 GB), `enableNonSslPort: true`, `allkeys-lru` |
+
+**Validations:**
+- [ ] SKU → `Balanced_B5`
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
+- [ ] Protocol: `enableNonSslPort: true` → `clientProtocol: "Plaintext"` (NOT `"Encrypted"`)
+- [ ] Port: 10000 (always 10000 for AMR regardless of protocol)
+- [ ] Eviction: `allkeys-lru` → `AllKeysLRU`
+- [ ] `minimumTlsVersion` still preserved on cluster resource (independent of clientProtocol)
+- [ ] `enableNonSslPort` removed from output
+
+---
+
+### TC-16: Premium P2 × 3 + Geo-Replication (linkedServers)
+
+| Field | Value |
+|---|---|
+| **Source** | `arm/premium-georeplication/acr.json` |
+| **Expected** | `arm/premium-georeplication/amr.json` |
+| **ACR Config** | Premium P2 (13 GB) × 3 shards, passive geo-replication via `linkedServers` child resource |
+
+**Validations:**
+- [ ] SKU → `Balanced_B50` (13 GB × 3 shards = 39 GB)
+- [ ] Clustering: `EnterpriseCluster` (source clustered, target > 24GB)
+- [ ] `linkedServers` child resource removed entirely
+- [ ] `geoReplication` property added to database resource with `groupNickname` and `linkedDatabases`
+- [ ] `linkedDatabases` array includes self (primary) and the secondary cache database reference
+- [ ] Metadata note explains passive → active-active conversion
+- [ ] Link to geo-replication docs in metadata
+- [ ] No persistence properties (persistence conflicts with active geo-replication)
+- [ ] Zones removed from AMR output
+
+---
+
+### TC-17: Premium P3 Non-Clustered (>24GB Boundary)
+
+| Field | Value |
+|---|---|
+| **Source** | `arm/premium-p3-nonclustered/acr.json` |
+| **Expected** | `arm/premium-p3-nonclustered/amr.json` |
+| **ACR Config** | Premium P3 (26 GB), non-clustered (no `shardCount`), `volatile-ttl`, SystemAssigned identity |
+
+**Validations:**
+- [ ] SKU → `Balanced_B20` (Premium P3 = 26 GB)
+- [ ] Clustering: `EnterpriseCluster` (required — target 26GB > 24GB, even though source was non-clustered)
+- [ ] Eviction: `volatile-ttl` → `VolatileTTL`
+- [ ] This is the key boundary test: source has no `shardCount` (non-clustered) but target exceeds 24GB
+- [ ] `maxmemory-reserved` and `maxfragmentationmemory-reserved` removed
+- [ ] Identity preserved: `SystemAssigned`
+
+---
+
 ## Test Coverage Matrix
 
 | Feature | Concrete | Parameterized | Bicep | Terraform |
@@ -346,9 +413,12 @@ These have separate template + parameters files. The AI must read **both** files
 | All features combined | TC-06 | — | — | — |
 | Firewall rule removal | TC-04, TC-06 | TC-09, TC-10 | — | — |
 | KeyVault reference | — | TC-10 | — | — |
-| Identity preservation | TC-01, TC-03, TC-06 | TC-07, TC-08 | — | TC-13, TC-14 |
+| Identity preservation | TC-01, TC-03, TC-06, TC-17 | TC-07, TC-08 | — | TC-13, TC-14 |
 | publicNetworkAccess | TC-01, TC-02, TC-04, TC-06 | TC-08, TC-09 | — | — |
 | shardCount: 0 handling | TC-02, TC-04 | TC-08 | — | — |
 | Separate params file | — | TC-07–TC-10 | — | — |
-| No zones in AMR output | TC-02, TC-03, TC-06 | TC-08 | — | TC-14 |
+| No zones in AMR output | TC-02, TC-03, TC-06, TC-16 | TC-08 | — | TC-14 |
 | No sku.capacity in AMR | All (universal) | All (universal) | All (universal) | All (universal) |
+| enableNonSslPort → Plaintext | TC-15 | — | — | — |
+| Geo-replication conversion | TC-16 | — | — | — |
+| Non-clustered >24GB boundary | TC-17 | — | — | — |

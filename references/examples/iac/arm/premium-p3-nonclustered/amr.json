@@ -2,16 +2,16 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "_scenario": "Basic C3 → AMR Balanced_B5",
-    "_migratedFrom": "Basic C3 (6 GB)",
-    "_targetSkuInfo": "Balanced_B5 (comparable to Basic C3)",
+    "_scenario": "Premium P3 (26 GB) non-clustered → AMR Balanced_B20 with EnterpriseCluster (required for >24GB)",
+    "_migratedFrom": "Premium P3 (26 GB)",
+    "_targetSkuInfo": "Balanced_B20 (comparable to Premium P3)",
     "_changes": [
       "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
-      "SKU: Basic/C/3 → Balanced_B5",
-      "Eviction: noeviction → NoEviction (PascalCase)",
-      "Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)",
+      "SKU: Premium/P/3 → Balanced_B20",
+      "Eviction: volatile-ttl → VolatileTTL (PascalCase)",
+      "Clustering: EnterpriseCluster (required — target > 24GB even though source was non-clustered)",
       "Port: 6380 → 10000",
-      "Removed: enableNonSslPort, redisVersion, redisConfiguration",
+      "Removed: enableNonSslPort, redisVersion, redisConfiguration, maxmemory-reserved, maxfragmentationmemory-reserved",
       "Added: clientProtocol Encrypted, database resource"
     ]
   },
@@ -19,17 +19,17 @@
     {
       "type": "Microsoft.Cache/redisEnterprise",
       "apiVersion": "2025-07-01",
-      "name": "my-basic-cache",
+      "name": "my-large-cache",
       "location": "westus2",
       "tags": {
         "Environment": "Production",
-        "Service": "WebApp"
+        "Service": "DataPlatform"
       },
       "identity": {
         "type": "SystemAssigned"
       },
       "sku": {
-        "name": "Balanced_B5"
+        "name": "Balanced_B20"
       },
       "properties": {
         "minimumTlsVersion": "1.2",
@@ -39,25 +39,26 @@
     {
       "type": "Microsoft.Cache/redisEnterprise/databases",
       "apiVersion": "2025-07-01",
-      "name": "my-basic-cache/default",
+      "name": "my-large-cache/default",
       "dependsOn": [
-        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-basic-cache')]"
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-large-cache')]"
       ],
       "properties": {
         "clientProtocol": "Encrypted",
         "port": 10000,
-        "evictionPolicy": "NoEviction"
+        "evictionPolicy": "VolatileTTL",
+        "clusteringPolicy": "EnterpriseCluster"
       }
     }
   ],
   "outputs": {
     "cacheId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-basic-cache')]"
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-large-cache')]"
     },
     "hostName": {
       "type": "string",
-      "value": "[concat('my-basic-cache', '.westus2.redis.azure.net')]"
+      "value": "[concat('my-large-cache', '.westus2.redis.azure.net')]"
     }
   }
 }

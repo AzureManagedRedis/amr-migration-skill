@@ -38,9 +38,6 @@
     "privateDnsZoneId": {
       "value": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-dns/providers/Microsoft.Network/privateDnsZones/privatelink.redis.azure.net"
     },
-    "clusteringPolicy": {
-      "value": "EnterpriseCluster"
-    },
     "evictionPolicy": {
       "value": "VolatileLRU"
     },

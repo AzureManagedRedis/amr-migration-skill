@@ -2,31 +2,29 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "_scenario": "Basic C3 → AMR Balanced_B5",
-    "_migratedFrom": "Basic C3 (6 GB)",
-    "_targetSkuInfo": "Balanced_B5 (comparable to Basic C3)",
+    "_scenario": "Standard C2 (non-TLS) → AMR Balanced_B5 with Plaintext protocol",
+    "_migratedFrom": "Standard C2 (6 GB)",
+    "_targetSkuInfo": "Balanced_B5 (comparable to Standard C2)",
     "_changes": [
       "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
-      "SKU: Basic/C/3 → Balanced_B5",
-      "Eviction: noeviction → NoEviction (PascalCase)",
+      "SKU: Standard/C/2 → Balanced_B5",
+      "Eviction: allkeys-lru → AllKeysLRU (PascalCase)",
       "Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)",
-      "Port: 6380 → 10000",
+      "Port: 6379/6380 → 10000",
+      "Protocol: enableNonSslPort true → clientProtocol Plaintext (preserves non-TLS access)",
       "Removed: enableNonSslPort, redisVersion, redisConfiguration",
-      "Added: clientProtocol Encrypted, database resource"
+      "Added: clientProtocol Plaintext, database resource"
     ]
   },
   "resources": [
     {
       "type": "Microsoft.Cache/redisEnterprise",
       "apiVersion": "2025-07-01",
-      "name": "my-basic-cache",
-      "location": "westus2",
+      "name": "my-nontls-cache",
+      "location": "eastus",
       "tags": {
-        "Environment": "Production",
-        "Service": "WebApp"
-      },
-      "identity": {
-        "type": "SystemAssigned"
+        "Environment": "Development",
+        "Service": "LegacyApp"
       },
       "sku": {
         "name": "Balanced_B5"
@@ -39,25 +37,25 @@
     {
       "type": "Microsoft.Cache/redisEnterprise/databases",
       "apiVersion": "2025-07-01",
-      "name": "my-basic-cache/default",
+      "name": "my-nontls-cache/default",
       "dependsOn": [
-        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-basic-cache')]"
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-nontls-cache')]"
       ],
       "properties": {
-        "clientProtocol": "Encrypted",
+        "clientProtocol": "Plaintext",
         "port": 10000,
-        "evictionPolicy": "NoEviction"
+        "evictionPolicy": "AllKeysLRU"
       }
     }
   ],
   "outputs": {
     "cacheId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-basic-cache')]"
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-nontls-cache')]"
     },
     "hostName": {
       "type": "string",
-      "value": "[concat('my-basic-cache', '.westus2.redis.azure.net')]"
+      "value": "[concat('my-nontls-cache', '.eastus.redis.azure.net')]"
     }
   }
 }
