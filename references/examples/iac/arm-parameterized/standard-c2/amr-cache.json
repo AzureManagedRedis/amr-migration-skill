@@ -2,10 +2,10 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "_migrationSource": "ACR Standard C2 (6 GB) → AMR Balanced_B5 (6 GB)",
+    "_migrationSource": "ACR Standard C2 (2.5 GB) → AMR Balanced_B3 (3 GB)",
     "_changes": [
       "Resource split: Microsoft.Cache/redis → redisEnterprise cluster + databases/default",
-      "SKU: Standard/C/2 → Balanced_B5",
+      "SKU: Standard/C/2 → Balanced_B3",
       "Eviction: allkeys-lru → AllKeysLRU (PascalCase)",
       "Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)",
       "Port: 6380 → 10000, clientProtocol: Encrypted",
@@ -27,7 +27,7 @@
     },
     "amrSkuName": {
       "type": "string",
-      "defaultValue": "Balanced_B5",
+      "defaultValue": "Balanced_B3",
       "metadata": { "description": "AMR SKU name (compound format)." }
     },
     "minimumTlsVersion": {

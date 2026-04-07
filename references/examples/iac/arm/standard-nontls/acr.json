@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "metadata": {
     "_scenario": "Standard C2 with non-TLS port enabled — tests enableNonSslPort conversion",
-    "_sourceSkuInfo": "Standard C2 (6 GB)"
+    "_sourceSkuInfo": "Standard C2 (2.5 GB)"
   },
   "resources": [
     {

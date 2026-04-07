@@ -2,12 +2,12 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "_scenario": "Standard C2 (non-TLS) → AMR Balanced_B5 with Plaintext protocol",
-    "_migratedFrom": "Standard C2 (6 GB)",
-    "_targetSkuInfo": "Balanced_B5 (comparable to Standard C2)",
+    "_scenario": "Standard C2 (non-TLS) → AMR Balanced_B3 with Plaintext protocol",
+    "_migratedFrom": "Standard C2 (2.5 GB)",
+    "_targetSkuInfo": "Balanced_B3 (comparable to Standard C2)",
     "_changes": [
       "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
-      "SKU: Standard/C/2 → Balanced_B5",
+      "SKU: Standard/C/2 → Balanced_B3",
       "Eviction: allkeys-lru → AllKeysLRU (PascalCase)",
       "Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)",
       "Port: 6379/6380 → 10000",
@@ -27,7 +27,7 @@
         "Service": "LegacyApp"
       },
       "sku": {
-        "name": "Balanced_B5"
+        "name": "Balanced_B3"
       },
       "properties": {
         "minimumTlsVersion": "1.2",
