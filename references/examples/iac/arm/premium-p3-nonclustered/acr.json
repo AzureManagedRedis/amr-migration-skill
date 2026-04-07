@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "_scenario": "Premium P3 non-clustered — tests >24GB boundary requiring clusteringPolicy",
+    "_scenario": "Premium P3 non-clustered — tests 24GB boundary (B20 = 24GB ≤ 24GB → non-clustered allowed)",
     "_sourceSkuInfo": "Premium P3 (26 GB)"
   },
   "resources": [

@@ -13,7 +13,8 @@
       "Port: 6379/6380 → 10000",
       "Protocol: enableNonSslPort true → clientProtocol Plaintext (preserves non-TLS access)",
       "Removed: enableNonSslPort, redisVersion, redisConfiguration",
-      "Added: clientProtocol Plaintext, database resource"
+      "Added: clientProtocol Plaintext, database resource",
+      "Output: listKeys path updated from Microsoft.Cache/redis to Microsoft.Cache/redisEnterprise/databases"
     ]
   },
   "resources": [
@@ -56,6 +57,10 @@
     "hostName": {
       "type": "string",
       "value": "[concat('my-nontls-cache', '.eastus.redis.azure.net')]"
+    },
+    "primaryAccessKey": {
+      "type": "securestring",
+      "value": "[listKeys(resourceId('Microsoft.Cache/redisEnterprise/databases', 'my-nontls-cache', 'default'), '2025-07-01').primaryKey]"
     }
   }
 }

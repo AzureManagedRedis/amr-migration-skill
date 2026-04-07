@@ -2,14 +2,14 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "_scenario": "Premium P3 (26 GB) non-clustered → AMR Balanced_B20 with EnterpriseCluster (required for >24GB)",
+    "_scenario": "Premium P3 (26 GB) non-clustered → AMR Balanced_B20 non-clustered (B20 = 24GB ≤ 24GB threshold)",
     "_migratedFrom": "Premium P3 (26 GB)",
-    "_targetSkuInfo": "Balanced_B20 (comparable to Premium P3)",
+    "_targetSkuInfo": "Balanced_B20 (24 GB — fits within non-clustered limit)",
     "_changes": [
       "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
       "SKU: Premium/P/3 → Balanced_B20",
       "Eviction: volatile-ttl → VolatileTTL (PascalCase)",
-      "Clustering: EnterpriseCluster (required — target > 24GB even though source was non-clustered)",
+      "Clustering: omitted — B20 (24GB) ≤ 24GB threshold, non-clustered mode supported per §6 rules",
       "Port: 6380 → 10000",
       "Removed: enableNonSslPort, redisVersion, redisConfiguration, maxmemory-reserved, maxfragmentationmemory-reserved",
       "Added: clientProtocol Encrypted, database resource"
@@ -46,8 +46,7 @@
       "properties": {
         "clientProtocol": "Encrypted",
         "port": 10000,
-        "evictionPolicy": "VolatileTTL",
-        "clusteringPolicy": "EnterpriseCluster"
+        "evictionPolicy": "VolatileTTL"
       }
     }
   ],

@@ -39,6 +39,10 @@
     "hostName": {
       "type": "string",
       "value": "[reference('my-nontls-cache').hostName]"
+    },
+    "primaryAccessKey": {
+      "type": "securestring",
+      "value": "[listKeys(resourceId('Microsoft.Cache/redis', 'my-nontls-cache'), '2024-03-01').primaryKey]"
     }
   }
 }

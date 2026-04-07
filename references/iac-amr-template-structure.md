@@ -376,12 +376,15 @@ Source has VNet injection if any of these are true:
 
 ### ARM Private Endpoint Skeleton
 
+> ⚠️ **Tag propagation**: Copy the source cache's `tags` onto the PE resource to maintain consistent resource tagging. If the source template had tags on the ACR resource, apply the same tags to the PE.
+
 ```json
 {
   "type": "Microsoft.Network/privateEndpoints",
   "apiVersion": "2023-11-01",
   "name": "[concat(parameters('cacheName'), '-pe')]",
   "location": "[parameters('location')]",
+  "tags": "<<copy from source cache resource>>",
   "dependsOn": [
     "[resourceId('Microsoft.Cache/redisEnterprise', parameters('cacheName'))]"
   ],
@@ -399,8 +402,28 @@ Source has VNet injection if any of these are true:
       "id": "[parameters('subnetId')]"
     }
   }
+},
+{
+  "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+  "apiVersion": "2023-11-01",
+  "name": "[concat(parameters('cacheName'), '-pe/default')]",
+  "dependsOn": [
+    "[resourceId('Microsoft.Network/privateEndpoints', concat(parameters('cacheName'), '-pe'))]"
+  ],
+  "properties": {
+    "privateDnsZoneConfigs": [
+      {
+        "name": "privatelink-redis-azure-net",
+        "properties": {
+          "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.redis.azure.net')]"
+        }
+      }
+    ]
+  }
 }
 ```
+
+> ⚠️ **DNS zone group required**: The `privateDnsZoneGroups` child resource is essential for DNS resolution. Without it, the PE deploys but clients cannot resolve `<cache>.<region>.redis.azure.net` to the private IP. The DNS zone `privatelink.redis.azure.net` must already exist in the subscription (or be created in the template).
 
 ### Updating Existing Private Endpoint Resources
 
@@ -526,10 +549,21 @@ If a `skuName` parameter already exists, change its `defaultValue` from the ACR 
 ### Outputs
 
 - **Remove** outputs that reference `Microsoft.Cache/redis` properties:
-  - `hostName` — does not exist on `Microsoft.Cache/redisEnterprise`; use `hostName` from the AMR cluster resource instead
+  - `hostName` — does not exist on `Microsoft.Cache/redisEnterprise`. Construct it using `concat()`:
+    > ⚠️ **Do NOT use** `reference('cacheName').hostName` — that property does not exist on the `redisEnterprise` RP response and will fail at deploy time. Use the `concat()` pattern instead:
+    > ```json
+    > "hostName": {
+    >   "type": "string",
+    >   "value": "[concat(parameters('cacheName'), '.', parameters('location'), '.redis.azure.net')]"
+    > }
+    > ```
+    > Bicep: `'${cacheName}.${location}.redis.azure.net'`
   - `sslPort` — AMR uses port 10000, not 6380
   - `port` / `nonSslPort` — port is always 10000 in AMR
-  - `accessKeys` — key retrieval uses a different API (`listKeys` on `Microsoft.Cache/redisEnterprise/databases`)
+  - `accessKeys` — key retrieval uses a different API path. Replace the `listKeys` resource reference:
+    - **ACR**: `listKeys(resourceId('Microsoft.Cache/redis', cacheName), '2023-08-01').primaryKey`
+    - **AMR**: `listKeys(resourceId('Microsoft.Cache/redisEnterprise/databases', clusterName, 'default'), '2025-07-01').primaryKey`
+    - The response properties (`.primaryKey`, `.secondaryKey`) remain the same; only the resource type and path change.
 - **Update** remaining `dependsOn` and `resourceId` references:
   - `Microsoft.Cache/redis` → `Microsoft.Cache/redisEnterprise`
   - `Microsoft.Cache/redis/firewallRules` → remove entirely
