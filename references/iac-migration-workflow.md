@@ -65,6 +65,14 @@ Generate the output in the **same IaC format** as the input (ARM JSON → ARM JS
 > - **`zones`**: Do NOT include — AMR auto-manages zone redundancy. Specifying it causes deployment errors.
 > - **Terraform**: Use `azurerm_managed_redis` (NOT the deprecated `azurerm_redis_enterprise_cluster`). Single resource with inline `default_database` block. See [AMR Template Structure §12](iac-amr-template-structure.md#12-terraform-output-structure).
 
+### Pre-flight Validation (Offline)
+
+Before validating against Azure (Step 7), run these offline checks to catch errors early:
+
+- **ARM JSON**: Validate syntax with any JSON linter; optionally check against the [ARM deployment template schema](https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#)
+- **Bicep**: Run `bicep build <file>.bicep` — catches syntax and type errors without Azure access
+- **Terraform**: Run `terraform validate` — checks configuration syntax and internal consistency offline
+
 ## Step 7: Present Output
 
 Show the migrated template and a summary of changes:
