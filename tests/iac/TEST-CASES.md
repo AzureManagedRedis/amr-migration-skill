@@ -383,7 +383,7 @@ These have separate template + parameters files. The AI must read **both** files
 
 ---
 
-### TC-17: Premium P3 Non-Clustered (>24GB Boundary)
+### TC-17: Premium P3 Non-Clustered (24GB Boundary)
 
 | Field | Value |
 |---|---|
@@ -392,10 +392,10 @@ These have separate template + parameters files. The AI must read **both** files
 | **ACR Config** | Premium P3 (26 GB), non-clustered (no `shardCount`), `volatile-ttl`, SystemAssigned identity |
 
 **Validations:**
-- [ ] SKU → `Balanced_B20` (Premium P3 = 26 GB)
-- [ ] Clustering: `EnterpriseCluster` (required — target 26GB > 24GB, even though source was non-clustered)
+- [ ] SKU → `Balanced_B20` (Premium P3 = 26 GB → B20 = 24 GB)
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — B20 target = 24GB ≤ 24GB threshold per §6 rules)
 - [ ] Eviction: `volatile-ttl` → `VolatileTTL`
-- [ ] This is the key boundary test: source has no `shardCount` (non-clustered) but target exceeds 24GB
+- [ ] This is the key boundary test: B20 (24GB) sits exactly at the ≤24GB threshold — non-clustered is allowed
 - [ ] `maxmemory-reserved` and `maxfragmentationmemory-reserved` removed
 - [ ] Identity preserved: `SystemAssigned`
 
