@@ -108,9 +108,9 @@ Key rules:
 | Property | Value | Notes |
 |---|---|---|
 | `port` | `10000` | **Always** 10000 — non-negotiable |
-| `clientProtocol` | `"Encrypted"` | **Always** encrypted — AMR is TLS-only |
-| `clusteringPolicy` | `"EnterpriseCluster"` or `"OSSCluster"` | See [Section 6](#6-clustering-policy-decision-matrix) |
-| `evictionPolicy` | PascalCase value | See [Section 4](#4-eviction-policy-mapping) |
+| `clientProtocol` | `"Encrypted"` or `"Plaintext"` | Default `"Encrypted"` (TLS). If source had `enableNonSslPort: true`, use `"Plaintext"` to preserve non-TLS access |
+| `clusteringPolicy` | `"EnterpriseCluster"` or `"OSSCluster"` or omitted | See [Section 6](#6-clustering-policy-decision-matrix). Omit for non-clustered caches (≤ 24GB) |
+| `evictionPolicy` | PascalCase value | See [Section 4](#4-eviction-policy-mapping). Converted from ACR `maxmemory-policy` |
 | `persistence` | Structured object | See [Section 5](#5-persistence-transformation); omit if source had no persistence |
 
 ---
@@ -196,18 +196,24 @@ Values ≤ 60 minutes round up to `1h` (AMR minimum). Values > 720 round down to
 
 ## 6. Clustering Policy Decision Matrix
 
+See [Azure Managed Redis architecture](https://learn.microsoft.com/en-us/azure/redis/architecture) for full details on clustering policies.
+
 ⚠️ **This decision may require user input.** Choosing the wrong policy can cause connection failures.
 
-| Source ACR Config | Recommended `clusteringPolicy` | Reason |
-|---|---|---|
-| Basic or Standard tier (any C* SKU) | `EnterpriseCluster` | Single-endpoint behavior matches source |
-| Premium, non-clustered (`shardCount` = 0 or absent) | `EnterpriseCluster` | Single-endpoint behavior matches source |
-| Premium, clustered (`shardCount` ≥ 1), client **not** cluster-aware | `EnterpriseCluster` | Avoids application code changes |
-| Premium, clustered (`shardCount` ≥ 1), client **is** cluster-aware | `OSSCluster` | Client already handles cluster topology |
+| Source ACR Config | Target AMR SKU Size | Recommended `clusteringPolicy` | Reason |
+|---|---|---|---|
+| Basic/Standard (any C* SKU), non-clustered | ≤ 24GB | Non-clustered (omit `clusteringPolicy`) | AMR supports non-clustered caches up to 24GB — no risk of cross-slot errors |
+| Basic/Standard (any C* SKU), non-clustered | > 24GB | `EnterpriseCluster` | Must use clustering for sizes above 24GB |
+| Premium, non-clustered (`shardCount` = 0 or absent) | ≤ 24GB | Non-clustered (omit `clusteringPolicy`) | Matches source single-endpoint behavior with no cross-slot risk |
+| Premium, non-clustered (`shardCount` = 0 or absent) | > 24GB | `EnterpriseCluster` | Must use clustering for sizes above 24GB |
+| Premium, clustered (`shardCount` ≥ 1), client **not** cluster-aware | any | `EnterpriseCluster` | Avoids application code changes |
+| Premium, clustered (`shardCount` ≥ 1), client **is** cluster-aware | any | `OSSCluster` | Client already handles cluster topology |
 
-**Default behavior:** Always output `EnterpriseCluster` unless the user explicitly confirms their client is cluster-aware and wants `OSSCluster`.
+**Default behavior:** If the source was non-clustered and the target AMR SKU (from Step 2) has an advertised size ≤ 24GB, use non-clustered AMR automatically — no need to ask the user about clustering. For target sizes > 24GB, use `EnterpriseCluster` unless the user explicitly confirms their client is cluster-aware and wants `OSSCluster`. The target size is encoded in the AMR SKU name (e.g., `Balanced_B5` = 6GB, `MemoryOptimized_M20` = 24GB).
 
 ⚠️ **Warning:** Using `OSSCluster` with a non-cluster-aware client **will cause connection failures**. When uncertain, always default to `EnterpriseCluster`.
+
+⚠️ **Cross-slot warning:** Even with `EnterpriseCluster`, keys are internally partitioned across multiple shards. Clients using multi-key commands (e.g., `MGET`, `SUNION`) or Lua scripts that access keys in different hash slots may encounter cross-slot errors. This is why non-clustered mode should be preferred when the target size allows it (≤ 24GB).
 
 ---
 
@@ -215,35 +221,42 @@ Values ≤ 60 minutes round up to `1h` (AMR minimum). Values > 720 round down to
 
 These ACR properties have **no equivalent** in AMR and must be removed during transformation:
 
-| ACR Property | Why Removed | AMR Replacement |
+| ACR Property | Why Not Available | AMR Replacement |
 |---|---|---|
-| `enableNonSslPort` | AMR is TLS-only (port 10000) | None — always encrypted |
+| `enableNonSslPort` | AMR uses `clientProtocol` on the database resource | Convert: if `enableNonSslPort: true`, set `clientProtocol: "Plaintext"`. If `false` or absent, set `clientProtocol: "Encrypted"` |
 | `shardCount` | AMR manages sharding internally | None — handled by SKU tier |
-| `replicasPerPrimary` | Not supported in AMR | Active geo-replication for read scaling |
-| `replicasPerMaster` | Deprecated alias for above | Active geo-replication for read scaling |
+| `replicasPerPrimary` | Not configurable in AMR | AMR automatically provides zone redundancy via built-in HA mechanisms |
+| `replicasPerMaster` | Deprecated alias for above | Same as `replicasPerPrimary` |
 | `redisVersion` | AMR always runs Redis 7.4+ | None — always latest |
-| `staticIP` | Not supported in AMR networking | Private Endpoint |
-| `subnetId` | VNet injection not supported | Private Endpoint resource |
+| `staticIP` | Not available in AMR networking | Private Endpoint |
+| `subnetId` | VNet injection not available in AMR | Private Endpoint resource |
 | `maxmemory-reserved` | AMR manages memory internally | None |
 | `maxfragmentationmemory-reserved` | AMR manages memory internally | None |
 | `maxmemory-delta` | AMR manages memory internally | None |
-| `aad-enabled` | AAD auth uses `identity` on cluster | `identity` block on cluster resource |
+| `maxmemory-policy` | Replaced by `evictionPolicy` on database resource | Convert to AMR `evictionPolicy` (PascalCase) — see [Section 4](#4-eviction-policy-mapping) |
+| `aad-enabled` | AMR supports Entra (AAD) auth through its own mechanism | AMR has native Entra ID support configured differently — not via `aad-enabled`. Preserve the `identity` block on the cluster resource. Advise user to configure Entra auth separately |
+| `patchSchedule` | Not available in AMR | AMR manages patching automatically |
 | `rdb-storage-connection-string` | AMR manages persistence storage | None — managed internally |
 | `aof-storage-connection-string-0` | AMR manages persistence storage | None — managed internally |
 | `aof-storage-connection-string-1` | AMR manages persistence storage | None — managed internally |
 
 **Rule:** If any of these properties appear as parameter references, those parameters must also be removed from the parameters section.
 
-### Geo-Replication (Special Case)
+### Geo-Replication Conversion
 
-ACR passive geo-replication uses `Microsoft.Cache/redis/linkedServers` child resources. AMR uses **active geo-replication**, which is a fundamentally different model configured via the database resource's `geoReplication` property with linked database groups. **This is NOT a simple property mapping** — it requires redesigning the replication topology.
+ACR passive geo-replication uses `Microsoft.Cache/redis/linkedServers` child resources. AMR uses **active geo-replication** (active-active model) configured via the database resource's `geoReplication` property with linked database groups. While the models differ, the conversion can be automated:
 
 If the source template contains `linkedServers`:
 1. **Remove** the `linkedServers` child resources
-2. **Warn the user** that geo-replication must be reconfigured manually for AMR
-3. Point them to [Azure Managed Redis active geo-replication docs](https://learn.microsoft.com/en-us/azure/redis/how-to-active-geo-replication)
+2. **Add** the AMR active geo-replication configuration to the database resource using `geoReplication.groupNickname` and `geoReplication.linkedDatabases`
+3. **Note for the user**: AMR active-active means clients *can* write to any linked cache (unlike ACR passive where the secondary was read-only). No harm if clients don't take advantage of the additional write capability.
+4. Point them to [Azure Managed Redis active geo-replication docs](https://learn.microsoft.com/en-us/azure/redis/how-to-active-geo-replication) for advanced configuration
 
-Do NOT attempt to auto-convert geo-replication configuration.
+**Restrictions** (flag these during conversion):
+- Data persistence is **not supported** with active geo-replication — if the source template includes both `linkedServers` and persistence properties (`rdb-backup-enabled`, `aof-backup-enabled`), warn the user to choose one
+- B0, B1, and Flash Optimized SKUs do not support geo-replication
+- All caches in the geo-replication group must have identical configuration (SKU, eviction policy, clustering policy, modules, TLS settings)
+- Only **RediSearch** and **RedisJSON** modules are supported with geo-replication
 
 ---
 
@@ -338,18 +351,26 @@ These parameters are no longer needed in AMR and should be deleted:
 
 - `skuFamily`
 - `skuCapacity`
-- `enableNonSslPort`
 - `shardCount`
 - `replicasPerPrimary` / `replicasPerMaster`
 - `redisVersion`
 - `staticIP`
 - `rdbStorageConnectionString`
 - `aofStorageConnectionString0` / `aofStorageConnectionString1`
-- `maxmemoryPolicy`
-- `rdbBackupFrequency`
+- `rdbBackupFrequency` — replaced by `rdbFrequency` parameter (see Parameters to Add)
 - `maxmemoryReserved`
 - `maxfragmentationmemoryReserved`
 - `maxmemoryDelta`
+- `patchSchedule` — AMR manages patching automatically
+
+### Parameters to Convert (not just remove)
+
+These parameters have AMR equivalents and should be transformed:
+
+| ACR Parameter | AMR Replacement | Conversion Logic |
+|---|---|---|
+| `enableNonSslPort` | `clientProtocol` | If value was `true`, set `clientProtocol` default to `"Plaintext"`. If `false`, set to `"Encrypted"` |
+| `maxmemoryPolicy` | `evictionPolicy` | Convert kebab-case to PascalCase (see [Section 4](#4-eviction-policy-mapping)) |
 
 > **Note:** `zones` parameter should always be **removed** — zone redundancy is automatic in AMR and specifying zones will cause a deployment error. See [Section 2](#2-cluster-resource-properties).
 
@@ -409,10 +430,10 @@ If a `skuName` parameter already exists, change its `defaultValue` from the ACR 
 ### Outputs
 
 - **Remove** outputs that reference `Microsoft.Cache/redis` properties:
-  - `hostName` — does not exist on `Microsoft.Cache/redisEnterprise`
+  - `hostName` — does not exist on `Microsoft.Cache/redisEnterprise`; use `hostName` from the AMR cluster resource instead
   - `sslPort` — AMR uses port 10000, not 6380
-  - `port` / `nonSslPort` — non-SSL not supported
-  - `accessKeys` — key retrieval uses a different API path
+  - `port` / `nonSslPort` — port is always 10000 in AMR
+  - `accessKeys` — key retrieval uses a different API (`listKeys` on `Microsoft.Cache/redisEnterprise/databases`)
 - **Update** remaining `dependsOn` and `resourceId` references:
   - `Microsoft.Cache/redis` → `Microsoft.Cache/redisEnterprise`
   - `Microsoft.Cache/redis/firewallRules` → remove entirely
@@ -437,9 +458,9 @@ resource "azurerm_managed_redis" "this" {
   }
 
   default_database {
-    client_protocol   = "Encrypted"
+    client_protocol   = "Encrypted"  # Use "Plaintext" if source had enable_non_ssl_port = true
     clustering_policy = "EnterpriseCluster"
-    eviction_policy   = "VolatileLRU"
+    eviction_policy   = "VolatileLRU"  # Converted from source maxmemory_policy
   }
 
   tags = var.tags
@@ -507,13 +528,15 @@ resource "azurerm_private_endpoint" "redis" {
 
 ### Attributes NOT on `azurerm_managed_redis`
 
-These ACR attributes do not exist on the AMR resource — remove them:
+These ACR attributes do not exist on the AMR resource — remove or convert them:
 - `minimum_tls_version` — not configurable on managed redis resource
 - `zones` — AMR manages zone redundancy automatically
 - `capacity`, `family` — encoded in `sku_name`
-- `enable_non_ssl_port`, `redis_version` — not applicable
+- `enable_non_ssl_port` — convert to `client_protocol` in `default_database` block (`true` → `"Plaintext"`, `false` → `"Encrypted"`)
+- `redis_version` — not applicable
 - `shard_count`, `replicas_per_primary` — not exposed in AMR
-- `redis_configuration` block — replaced by `default_database` block
+- `redis_configuration` block — replaced by `default_database` block; convert `maxmemory_policy` to `eviction_policy`
+- `patch_schedule` — not available in AMR
 
 ---
 

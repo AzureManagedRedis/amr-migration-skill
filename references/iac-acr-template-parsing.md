@@ -36,7 +36,7 @@ Search the top-level `resources` array for the object with:
 "type": "Microsoft.Cache/redis"
 ```
 
-Common API version: `2023-08-01`. The resource object contains `sku`, `properties`, `identity`, `tags`, `zones`, and `location` at the top level.
+The API version varies across templates (e.g., `2023-08-01`, `2024-03-01`, etc.) — do not assume a specific version. The resource object contains `sku`, `properties`, `identity`, `tags`, `zones`, and `location` at the top level.
 
 ### SKU Extraction
 
@@ -62,12 +62,15 @@ Derive the combined SKU code as `{family}{capacity}` — e.g., `P2`, `C3`. See `
 
 All under the `properties` object of the resource:
 
+Example values (these vary per deployment — do not treat as universal):
+
 ```json
 "properties": {
   "shardCount": 3,
   "replicasPerPrimary": 2,
   "enableNonSslPort": false,
   "minimumTlsVersion": "1.2",
+  "patchSchedule": [ { "dayOfWeek": "Monday", "startHourUtc": 2 } ],
   "subnetId": "/subscriptions/.../subnets/redis-subnet",
   "redisConfiguration": { ... }
 }
@@ -77,11 +80,12 @@ All under the `properties` object of the resource:
 |----------|------|---------|-------|
 | `shardCount` | int | `0` or absent | Premium only. `0` or absent = non-clustered. `≥ 1` = clustered (OSS Cluster protocol). Even `1` shard means clustered. |
 | `replicasPerPrimary` | int | `1` | Premium MRPP. Legacy name: `replicasPerMaster`. |
-| `enableNonSslPort` | bool | `false` | Being removed in AMR (always SSL, port 10000). |
-| `minimumTlsVersion` | string | `"1.2"` | Typically `"1.0"`, `"1.1"`, or `"1.2"`. |
+| `enableNonSslPort` | bool | `false` | Enables the non-TLS port (6379). In AMR, convert to the AMR-equivalent `clientProtocol` setting (see [AMR template structure](iac-amr-template-structure.md)). |
+| `minimumTlsVersion` | string | `"1.2"` | Typically `"1.0"`, `"1.1"`, `"1.2"`, or `"1.3"`. |
 | `publicNetworkAccess` | string | `"Enabled"` | `"Enabled"` or `"Disabled"`. Preserve in AMR output if `"Disabled"`. |
-| `staticIP` | string | absent | Premium VNet-injected only. Note for client IP dependency awareness. |
-| `subnetId` | string | absent | Resource ID of the VNet subnet. Premium only. |
+| `staticIP` | string | absent | Premium VNet-injected only. Not available in AMR — note for client IP dependency awareness. |
+| `subnetId` | string | absent | Resource ID of the VNet subnet. Premium only. VNet injection is not available in AMR — must convert to Private Endpoint. |
+| `patchSchedule` | array | absent | Scheduled patching windows. Each entry has `dayOfWeek` and `startHourUtc`. Not available in AMR — AMR manages patching automatically. |
 | `zones` | array | absent | Availability zones, e.g., `["1", "2", "3"]`. |
 
 ### Redis Configuration Block
@@ -100,13 +104,13 @@ Under `properties.redisConfiguration`:
 
 | Key | Type | Notes |
 |-----|------|-------|
-| `maxmemory-policy` | string | Eviction policy: `volatile-lru`, `allkeys-lru`, `noeviction`, etc. |
+| `maxmemory-policy` | string | Eviction policy: `volatile-lru`, `allkeys-lru`, `noeviction`, etc. Converts to `evictionPolicy` in AMR. |
 | `rdb-backup-enabled` | string or bool | `"true"` / `"false"` or `true` / `false` |
 | `rdb-backup-frequency` | string | Minutes: `"15"`, `"30"`, `"60"`, `"360"`, `"720"`, or `"1440"` |
-| `rdb-storage-connection-string` | string | Storage account connection. **Removed in AMR.** |
+| `rdb-storage-connection-string` | string | Storage account connection. **Not available in AMR** — AMR manages persistence storage internally. |
 | `aof-backup-enabled` | string or bool | `"true"` / `"false"` or `true` / `false` |
-| `aof-storage-connection-string-0` | string | Primary storage connection. **Removed in AMR.** |
-| `aof-storage-connection-string-1` | string | Secondary storage connection. **Removed in AMR.** |
+| `aof-storage-connection-string-0` | string | Primary storage connection. **Not available in AMR** — managed internally. |
+| `aof-storage-connection-string-1` | string | Secondary storage connection. **Not available in AMR** — managed internally. |
 
 ### Identity Block
 
@@ -143,11 +147,12 @@ Scan the full `resources` array for these related resource types:
 
 | Resource Type | What It Means |
 |---------------|---------------|
-| `Microsoft.Cache/redis/firewallRules` | Firewall rules on the cache |
+| `Microsoft.Cache/redis/firewallRules` | Firewall rules on the cache. **Not available in AMR** — must use Private Endpoint + NSG instead. |
 | `Microsoft.Cache/redis/linkedServers` | Geo-replication links |
+| `Microsoft.Cache/redis/patchSchedules` | Scheduled patching windows. **Not available in AMR** — AMR manages patching automatically. |
 | `Microsoft.Network/privateEndpoints` with `"redisCache"` in `groupIds` | Existing private endpoint |
 
-For firewall rules, each resource has `properties.startIP` and `properties.endIP`. For private endpoints, check the `privateLinkServiceConnections[].groupIds` array for `"redisCache"`.
+For firewall rules, each resource has `properties.startIP` and `properties.endIP`. Note that firewall rules are **not available in AMR** — advise the user to use NSG rules on the Private Endpoint subnet instead. For private endpoints, check the `privateLinkServiceConnections[].groupIds` array for `"redisCache"`.
 
 ---
 
@@ -191,6 +196,8 @@ Expressions like `[if(greater(parameters('shardCount'), 0), ...)]` or `[concat(p
 2. Resolve each individual parameter
 3. If the expression is a simple conditional (`if`), try to evaluate it based on the resolved values
 4. Otherwise, flag the value as requiring user confirmation
+
+For more on ARM template expressions and built-in functions, see [ARM template functions reference](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions).
 
 ### Variable References for redisConfiguration
 
@@ -383,7 +390,7 @@ resource "azurerm_private_endpoint" "example" {
 }
 ```
 
-Geo-replication uses `azurerm_redis_linked_server`.
+Geo-replication uses `azurerm_redis_linked_server`. Scheduled patching uses the `patch_schedule` block inside `azurerm_redis_cache` — this is not available in AMR.
 
 ---
 
@@ -393,16 +400,18 @@ After extracting all properties, determine which features are active. This table
 
 | Feature | Detection Criteria | Migration Impact |
 |---------|-------------------|------------------|
-| **VNet injection** | `subnetId` is present and non-empty | Must create a Private Endpoint resource in AMR |
+| **VNet injection** | `subnetId` is present and non-empty | Not available in AMR — must create a Private Endpoint resource |
 | **Persistence (RDB)** | `rdb-backup-enabled` = `true` or `"true"` | Map frequency: `15` → `1h`, `30` → `1h`, `60` → `1h`, `360` → `6h`, `720` → `12h`, `1440` → `12h` |
 | **Persistence (AOF)** | `aof-backup-enabled` = `true` or `"true"` | Map to `aofFrequency: "always"` or `"1s"` |
 | **Clustering** | `shardCount` ≥ 1 (including 1) | Affects SKU selection and clustering policy. `shardCount: 1` = OSS Cluster. |
 | **Multi-replica (MRPP)** | `replicasPerPrimary` > 1 | Affects SKU selection |
-| **Firewall rules** | Child resources of type `firewallRules` present | Not supported in AMR — must use Private Endpoint + NSG |
-| **Geo-replication** | Child resources of type `linkedServers` present | Active geo-replication uses a different AMR mechanism |
+| **Firewall rules** | Child resources of type `firewallRules` present | Not available in AMR — must use Private Endpoint + NSG |
+| **Geo-replication** | Child resources of type `linkedServers` present | Convert to AMR active geo-replication (active-active model) |
 | **Managed identity** | `identity` block is present | Preserved in the AMR cluster resource |
-| **Non-SSL port** | `enableNonSslPort` = `true` | Removed in AMR (always SSL-only, port 10000) |
-| **Availability zones** | `zones` array is present and non-empty | Preserved in AMR |
+| **Non-SSL port** | `enableNonSslPort` = `true` | Convert to AMR `clientProtocol` setting. AMR supports a "Non-TLS access only" mode. |
+| **Scheduled patching** | `patchSchedule` child resource or property present | Not available in AMR — AMR manages patching automatically. Remove and note for user. |
+| **Availability zones** | `zones` array is present and non-empty | Do NOT include in AMR — zone redundancy is automatic |
+| **Diagnostic settings** | `Microsoft.Insights/diagnosticSettings` resources targeting the cache | These do not transfer directly to AMR. The resource ID and category names change for `Microsoft.Cache/redisEnterprise`. Advise the user to reconfigure diagnostics for the new AMR resource. |
 
 See `feature-comparison.md` for detailed feature gap analysis between ACR and AMR.
 
