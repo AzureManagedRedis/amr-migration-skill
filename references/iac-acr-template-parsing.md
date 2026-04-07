@@ -2,7 +2,7 @@
 
 ## Table of Contents
 - [Template Format Detection](#template-format-detection)
-- [ARM JSON Templates](#arm-json-templates)
+- [ARM Deployment Templates](#arm-deployment-templates)
 - [ARM Parameter Resolution](#arm-parameter-resolution)
 - [Bicep Templates](#bicep-templates)
 - [Terraform Templates](#terraform-templates)
@@ -26,7 +26,7 @@ Determine the IaC format from the file extension:
 
 ---
 
-## ARM JSON Templates
+## ARM Deployment Templates
 
 ### Resource Identification
 
@@ -102,15 +102,17 @@ Under `properties.redisConfiguration`:
 }
 ```
 
-| Key | Type | Notes |
-|-----|------|-------|
-| `maxmemory-policy` | string | Eviction policy: `volatile-lru`, `allkeys-lru`, `noeviction`, etc. Converts to `evictionPolicy` in AMR. |
-| `rdb-backup-enabled` | string or bool | `"true"` / `"false"` or `true` / `false` |
-| `rdb-backup-frequency` | string | Minutes: `"15"`, `"30"`, `"60"`, `"360"`, `"720"`, or `"1440"` |
-| `rdb-storage-connection-string` | string | Storage account connection. **Not available in AMR** — AMR manages persistence storage internally. |
-| `aof-backup-enabled` | string or bool | `"true"` / `"false"` or `true` / `false` |
-| `aof-storage-connection-string-0` | string | Primary storage connection. **Not available in AMR** — managed internally. |
-| `aof-storage-connection-string-1` | string | Secondary storage connection. **Not available in AMR** — managed internally. |
+> **Note:** Not all `redisConfiguration` keys transfer directly to AMR. Eviction policy and persistence enablement/frequency map to AMR database properties, but storage connection strings are not needed (AMR manages storage internally). See the AMR column below.
+
+| Key | Type | AMR Transfer | Notes |
+|-----|------|-------------|-------|
+| `maxmemory-policy` | string | ✅ Converts to `evictionPolicy` | Eviction policy: `volatile-lru`, `allkeys-lru`, `noeviction`, etc. |
+| `rdb-backup-enabled` | string or bool | ✅ Maps to `persistence.rdbEnabled` | `"true"` / `"false"` or `true` / `false` |
+| `rdb-backup-frequency` | string | ✅ Maps to `persistence.rdbFrequency` | Minutes: `"15"`, `"30"`, `"60"`, `"360"`, `"720"`, or `"1440"`. Map to AMR values: `1h`, `6h`, `12h`. |
+| `rdb-storage-connection-string` | string | ❌ Not needed | Storage account connection. **Not available in AMR** — AMR manages persistence storage internally. |
+| `aof-backup-enabled` | string or bool | ✅ Maps to `persistence.aofEnabled` | `"true"` / `"false"` or `true` / `false` |
+| `aof-storage-connection-string-0` | string | ❌ Not needed | Primary storage connection. **Not available in AMR** — managed internally. |
+| `aof-storage-connection-string-1` | string | ❌ Not needed | Secondary storage connection. **Not available in AMR** — managed internally. |
 
 ### Identity Block
 
