@@ -39,6 +39,8 @@ Key rules:
 - The database resource **must** have `dependsOn` referencing the cluster.
 - API version: **`2025-07-01`** (GA, required for `publicNetworkAccess` support). This is the minimum GA version that supports `publicNetworkAccess` as a required property. Do NOT use older preview versions for new deployments.
 
+> ⚠️ **Multiple Databases Warning:** ACR supports up to 16 Redis databases (0–15) by default, configurable up to 64 on Premium. AMR supports **only database 0** (`default`). If the source application uses multiple databases, warn the user that they need to refactor their data model to use a single database (e.g., key prefixes for logical separation) before migrating.
+
 ---
 
 ## 2. Cluster Resource Properties
@@ -109,9 +111,10 @@ Key rules:
 |---|---|---|
 | `port` | `10000` | **Always** 10000 — non-negotiable |
 | `clientProtocol` | `"Encrypted"` or `"Plaintext"` | Default `"Encrypted"` (TLS). If source had `enableNonSslPort: true`, use `"Plaintext"` to preserve non-TLS access |
-| `clusteringPolicy` | `"EnterpriseCluster"` or `"OSSCluster"` or omitted | See [Section 6](#6-clustering-policy-decision-matrix). Omit for non-clustered caches (≤ 24GB) |
+| `clusteringPolicy` | `"EnterpriseCluster"`, `"OSSCluster"`, or `"NoCluster"` | See [Section 6](#6-clustering-policy-decision-matrix). Use `"NoCluster"` for non-clustered caches (≤ 24GB). **Do NOT omit** — default is `OSSCluster`. |
 | `evictionPolicy` | PascalCase value | See [Section 4](#4-eviction-policy-mapping). Converted from ACR `maxmemory-policy` |
 | `persistence` | Structured object | See [Section 5](#5-persistence-transformation); omit if source had no persistence |
+| `accessKeysAuthentication` | `"Enabled"` or `"Disabled"` | Default `"Enabled"`. If source ACR had `disableAccessKeyAuthentication: true`, set `"Disabled"`. Omit if source was `false` or absent (default behavior is correct). |
 
 ---
 
@@ -202,14 +205,16 @@ See [Azure Managed Redis architecture](https://learn.microsoft.com/en-us/azure/r
 
 | Source ACR Config | Target AMR SKU Size | Recommended `clusteringPolicy` | Reason |
 |---|---|---|---|
-| Basic/Standard (any C* SKU), non-clustered | ≤ 24GB | Non-clustered (omit `clusteringPolicy`) | AMR supports non-clustered caches up to 24GB — no risk of cross-slot errors |
+| Basic/Standard (any C* SKU), non-clustered | ≤ 24GB | `NoCluster` | AMR supports non-clustered caches up to 24GB — no risk of cross-slot errors. `NoCluster` can later be upgraded to clustered without recreating the database. |
 | Basic/Standard (any C* SKU), non-clustered | > 24GB | `EnterpriseCluster` | Must use clustering for sizes above 24GB |
-| Premium, non-clustered (`shardCount` = 0 or absent) | ≤ 24GB | Non-clustered (omit `clusteringPolicy`) | Matches source single-endpoint behavior with no cross-slot risk |
+| Premium, non-clustered (`shardCount` = 0 or absent) | ≤ 24GB | `NoCluster` | Matches source single-endpoint behavior with no cross-slot risk. `NoCluster` can later be upgraded to clustered without recreating the database. |
 | Premium, non-clustered (`shardCount` = 0 or absent) | > 24GB | `EnterpriseCluster` | Must use clustering for sizes above 24GB |
 | Premium, clustered (`shardCount` ≥ 1), client **not** cluster-aware | any | `EnterpriseCluster` | Avoids application code changes |
 | Premium, clustered (`shardCount` ≥ 1), client **is** cluster-aware | any | `OSSCluster` | Client already handles cluster topology |
 
-**Default behavior:** If the source was non-clustered and the target AMR SKU (from Step 2) has an advertised size ≤ 24GB, use non-clustered AMR automatically — no need to ask the user about clustering. For target sizes > 24GB, use `EnterpriseCluster` unless the user explicitly confirms their client is cluster-aware and wants `OSSCluster`. The target size is encoded in the AMR SKU name (e.g., `Balanced_B5` = 6GB, `MemoryOptimized_M20` = 24GB).
+**Default behavior:** If the source was non-clustered and the target AMR SKU (from Step 2) has an advertised size ≤ 24GB, set `"clusteringPolicy": "NoCluster"` automatically — no need to ask the user about clustering. For target sizes > 24GB, use `EnterpriseCluster` unless the user explicitly confirms their client is cluster-aware and wants `OSSCluster`. The target size is encoded in the AMR SKU name (e.g., `Balanced_B5` = 6GB, `MemoryOptimized_M20` = 24GB).
+
+> ⚠️ **Do NOT omit `clusteringPolicy`** — the default when omitted is `OSSCluster`, not non-clustered. You must explicitly set `"NoCluster"` for non-clustered caches. The `NoCluster` value is available in API version `2025-07-01` and later.
 
 ⚠️ **Warning:** Using `OSSCluster` with a non-cluster-aware client **will cause connection failures**. When uncertain, always default to `EnterpriseCluster`.
 
@@ -235,10 +240,12 @@ These ACR properties have **no equivalent** in AMR and must be removed during tr
 | `maxmemory-delta` | AMR manages memory internally | None |
 | `maxmemory-policy` | Replaced by `evictionPolicy` on database resource | Convert to AMR `evictionPolicy` (PascalCase) — see [Section 4](#4-eviction-policy-mapping) |
 | `aad-enabled` | AMR supports Entra (AAD) auth through its own mechanism | AMR has native Entra ID support configured differently — not via `aad-enabled`. Preserve the `identity` block on the cluster resource. Advise user to configure Entra auth separately |
+| `disableAccessKeyAuthentication` | Replaced by `accessKeysAuthentication` on AMR database | Convert: `true` → `accessKeysAuthentication: "Disabled"`, `false`/absent → `accessKeysAuthentication: "Enabled"` (or omit — default is `"Enabled"`). This controls whether password (access key) auth is allowed. |
 | `patchSchedule` | Converted to `maintenanceConfiguration` | Map each ACR `dayOfWeek`+`startHourUtc` entry to an AMR `maintenanceWindows[]` entry with `type: "Weekly"`, matching day, start hour, and minimum 4h `duration` (e.g., `"PT5H"`). Requires API `2025-08-01-preview`. See [Section 7a](#7a-scheduled-maintenance-mapping). |
 | `rdb-storage-connection-string` | AMR manages persistence storage | None — managed internally |
 | `aof-storage-connection-string-0` | AMR manages persistence storage | None — managed internally |
 | `aof-storage-connection-string-1` | AMR manages persistence storage | None — managed internally |
+| `notify-keyspace-events` | **Not available in AMR** | ⚠️ Keyspace notifications are not currently supported in Azure Managed Redis. If the source has this set, **warn the user** that this functionality will not be available after migration. |
 
 **Rule:** If any of these properties appear as parameter references, those parameters must also be removed from the parameters section.
 
@@ -613,12 +620,13 @@ resource "azurerm_managed_redis" "this" {
 | Attribute | Maps From | Notes |
 |---|---|---|
 | `client_protocol` | `enable_non_ssl_port` | `"Encrypted"` (default). If source had `enable_non_ssl_port = true`, use `"Plaintext"` |
-| `clustering_policy` | — | `"EnterpriseCluster"`, `"OSSCluster"`, or **omit** for non-clustered ≤ 24GB (see [Section 6](#6-clustering-policy-decision-matrix)) |
+| `clustering_policy` | — | `"EnterpriseCluster"`, `"OSSCluster"`, or `"NoCluster"` for non-clustered ≤ 24GB (see [Section 6](#6-clustering-policy-decision-matrix)). **Do NOT omit** — default is `OSSCluster`. |
 | `eviction_policy` | `maxmemory_policy` | PascalCase (e.g., `"VolatileLRU"`) |
 | `persistence_redis_database_backup_frequency` | `rdb_backup_frequency` | `"1h"`, `"6h"`, or `"12h"` |
 | `persistence_append_only_file_backup_frequency` | `aof_backup_enabled` | `"1s"` or `"always"` |
 | `port` | — | Computed, defaults to `10000` |
 | `geo_replication_group_name` | — | For active geo-replication |
+| `access_keys_authentication` | `disableAccessKeyAuthentication` | `"Enabled"` (default). If source had `disable_access_key_authentication = true`, set `"Disabled"` |
 
 ### Persistence Mapping
 

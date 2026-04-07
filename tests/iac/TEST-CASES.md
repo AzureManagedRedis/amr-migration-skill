@@ -29,7 +29,7 @@ Source/expected files are organized under `references/examples/iac/` by format:
 **Database properties:**
 - [ ] `clientProtocol: "Encrypted"`, `port: 10000`
 - [ ] Eviction policy converted to PascalCase
-- [ ] Clustering policy: Omit `clusteringPolicy` if non-clustered source and target ≤ 24GB; otherwise set to `EnterpriseCluster` or `OSSCluster`
+- [ ] Clustering policy: Set `clusteringPolicy` to `NoCluster` for non-clustered source and target ≤ 24GB; set to `EnterpriseCluster` for non-clustered source with target > 24GB; set to `EnterpriseCluster` or `OSSCluster` for clustered sources
 
 **Workflow:**
 - [ ] Confirmation gate presented before generating template
@@ -62,7 +62,7 @@ These use hardcoded values (no parameters file).
 
 **Validations:**
 - [ ] SKU → `Balanced_B5`
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — source non-clustered, target 6GB ≤ 24GB)
 - [ ] Eviction: `noeviction` → `NoEviction`
 - [ ] Removes `enableNonSslPort`, `redisVersion`, `aad-enabled`
 - [ ] `publicNetworkAccess: "Enabled"` on cluster (source was `Enabled`)
@@ -82,7 +82,7 @@ These use hardcoded values (no parameters file).
 
 **Validations:**
 - [ ] SKU → `Balanced_B5`
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source shardCount=0, target 6GB ≤ 24GB)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — source shardCount=0, target 6GB ≤ 24GB)
 - [ ] `publicNetworkAccess: "Enabled"` on cluster resource
 - [ ] Source zones `["1","2","3"]` NOT carried to AMR output (auto-managed)
 - [ ] No persistence or VNet resources generated
@@ -118,7 +118,7 @@ These use hardcoded values (no parameters file).
 
 **Validations:**
 - [ ] SKU → `Balanced_B10` (Premium P2 = 13 GB)
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source shardCount=0, target 13GB ≤ 24GB)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — source shardCount=0, target 13GB ≤ 24GB)
 - [ ] VNet injection → Private Endpoint resource generated
 - [ ] `subnetId` removed from cache, used for Private Endpoint subnet
 - [ ] `staticIP` removed (not applicable with Private Endpoint)
@@ -141,7 +141,7 @@ These use hardcoded values (no parameters file).
 
 **Validations:**
 - [ ] SKU → `Balanced_B10` (Premium P2 = 13 GB)
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 13GB ≤ 24GB)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — source non-clustered, target 13GB ≤ 24GB)
 - [ ] Eviction: `allkeys-lfu` → `AllKeysLFU`
 - [ ] AOF: → `aofEnabled: true`, `aofFrequency: "1s"` on database persistence
 - [ ] `aof-storage-connection-string-0` removed
@@ -187,7 +187,7 @@ These have separate template + parameters files. The AI must read **both** files
 **Validations:**
 - [ ] Reads parameters file to determine actual SKU (Standard C2, not Premium default)
 - [ ] SKU → `Balanced_B3`
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 3GB ≤ 24GB)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — source non-clustered, target 3GB ≤ 24GB)
 - [ ] Eviction: `allkeys-lru` → `AllKeysLRU`
 - [ ] Outputs **both** template + parameters files
 - [ ] No Premium-only params in output (no persistence, VNet, shardCount)
@@ -209,7 +209,7 @@ These have separate template + parameters files. The AI must read **both** files
 **Validations:**
 - [ ] Reads `shardCount: 0` from params → confirms non-clustered
 - [ ] SKU → `Balanced_B5` (not B50 — no shards)
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source shardCount=0, target 6GB ≤ 24GB)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — source shardCount=0, target 6GB ≤ 24GB)
 - [ ] `publicNetworkAccess: "Disabled"` preserved in output params
 - [ ] Eviction: `volatile-ttl` → `VolatileTTL`
 - [ ] `maxmemoryReserved` and `maxfragmentationmemoryReserved` removed from output params
@@ -230,7 +230,7 @@ These have separate template + parameters files. The AI must read **both** files
 
 **Validations:**
 - [ ] `subnetId` param → replaced by `privateEndpointSubnetId` param
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — source non-clustered, target 6GB ≤ 24GB)
 - [ ] `staticIP` param removed entirely
 - [ ] `firewallRules` param removed with warning
 - [ ] Private Endpoint resource generated in template
@@ -281,7 +281,7 @@ These have separate template + parameters files. The AI must read **both** files
 - [ ] Uses Bicep resource declaration syntax
 - [ ] Proper parent/child relationship for database resource
 - [ ] All property transformations match ARM equivalents
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — source non-clustered, target 6GB ≤ 24GB)
 
 ---
 
@@ -313,7 +313,7 @@ These have separate template + parameters files. The AI must read **both** files
 - [ ] Resource type: `azurerm_redis_cache` → `azurerm_managed_redis` (single resource)
 - [ ] SKU → `Balanced_B5`
 - [ ] Eviction: `noeviction` → `NoEviction`
-- [ ] Clustering: Non-clustered (omit `clustering_policy` — source non-clustered, target 6GB ≤ 24GB)
+- [ ] Clustering: Non-clustered (`clustering_policy: NoCluster` — source non-clustered, target 6GB ≤ 24GB)
 - [ ] Identity preserved (SystemAssigned) via `identity` block
 - [ ] Database config in `default_database` inline block (not separate resource)
 - [ ] Removed: `enable_non_ssl_port`, `redis_version`, `redis_configuration` block, `minimum_tls_version`
@@ -353,8 +353,8 @@ These have separate template + parameters files. The AI must read **both** files
 
 **Validations:**
 - [ ] SKU → `Balanced_B3`
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 3GB ≤ 24GB)
-- [ ] Protocol: `enableNonSslPort: true` → `clientProtocol: "Plaintext"` (NOT `"Encrypted"`)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — source non-clustered, target 3GB ≤ 24GB)
+- [ ] Protocol: `enableNonSslPort: true` → `clientProtocol: "Plaintext"`(NOT `"Encrypted"`)
 - [ ] Port: 10000 (always 10000 for AMR regardless of protocol)
 - [ ] Eviction: `allkeys-lru` → `AllKeysLRU`
 - [ ] `minimumTlsVersion` still preserved on cluster resource (independent of clientProtocol)
@@ -393,7 +393,7 @@ These have separate template + parameters files. The AI must read **both** files
 
 **Validations:**
 - [ ] SKU → `Balanced_B20` (Premium P3 = 26 GB → B20 = 24 GB)
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — B20 target = 24GB ≤ 24GB threshold per §6 rules)
+- [ ] Clustering: Non-clustered (`clusteringPolicy: NoCluster` — B20 target = 24GB ≤ 24GB threshold per §6 rules)
 - [ ] Eviction: `volatile-ttl` → `VolatileTTL`
 - [ ] This is the key boundary test: B20 (24GB) sits exactly at the ≤24GB threshold — non-clustered is allowed
 - [ ] `maxmemory-reserved` and `maxfragmentationmemory-reserved` removed
@@ -411,7 +411,7 @@ These have separate template + parameters files. The AI must read **both** files
 
 **Validations:**
 - [ ] SKU → `Balanced_B3` (Standard C2 = 2.5 GB, maps to B3 per SKU table)
-- [ ] Clustering: omitted (non-clustered, target ≤ 24GB)
+- [ ] Clustering: `clusteringPolicy: NoCluster` (non-clustered, target ≤ 24GB)
 - [ ] Eviction: `allkeys-lru` → `AllKeysLRU`
 - [ ] `patchSchedules` child resource removed — NOT carried as a separate AMR resource
 - [ ] `maintenanceConfiguration` present on cluster resource `properties`

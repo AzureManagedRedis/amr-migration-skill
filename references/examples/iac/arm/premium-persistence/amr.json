@@ -12,7 +12,8 @@
       "Persistence: aof-backup-enabled → aofEnabled: true, aofFrequency: 1s",
       "Persistence: storage connection string removed (AMR manages internally)",
       "Identity: preserved (type + userAssignedIdentities, not principalId/tenantId)",
-      "Removed: shardCount, enableNonSslPort, redisVersion"
+      "Removed: shardCount, enableNonSslPort, redisVersion",
+      "Clustering: Non-clustered (clusteringPolicy: NoCluster — source non-clustered, target ≤ 24GB)"
     ]
   },
   "resources": [
@@ -48,6 +49,7 @@
       ],
       "properties": {
         "clientProtocol": "Encrypted",
+        "clusteringPolicy": "NoCluster",
         "port": 10000,
         "evictionPolicy": "AllKeysLFU",
         "persistence": {

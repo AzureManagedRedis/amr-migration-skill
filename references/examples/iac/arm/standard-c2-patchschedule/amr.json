@@ -9,7 +9,7 @@
       "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
       "SKU: Standard/C/2 → Balanced_B3",
       "Eviction: allkeys-lru → AllKeysLRU (PascalCase)",
-      "Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)",
+      "Clustering: Non-clustered (clusteringPolicy: NoCluster — source non-clustered, target ≤ 24GB)",
       "Port: 6380 → 10000",
       "Removed: enableNonSslPort, redisVersion, redisConfiguration, patchSchedules child resource",
       "Added: clientProtocol Encrypted, database resource",
@@ -63,6 +63,7 @@
       ],
       "properties": {
         "clientProtocol": "Encrypted",
+        "clusteringPolicy": "NoCluster",
         "port": 10000,
         "evictionPolicy": "AllKeysLRU"
       }

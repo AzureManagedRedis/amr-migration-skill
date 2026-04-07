@@ -13,7 +13,8 @@
       "DNS: privatelink.redis.azure.net (AMR private link zone)",
       "Removed: subnetId, staticIP, enableNonSslPort, shardCount",
       "Preserved: publicNetworkAccess Disabled (carried from source)",
-      "PE groupIds: redisEnterprise (NOT redisCache)"
+      "PE groupIds: redisEnterprise (NOT redisCache)",
+      "Clustering: Non-clustered (clusteringPolicy: NoCluster — source non-clustered, target ≤ 24GB)"
     ]
   },
   "resources": [
@@ -43,6 +44,7 @@
       ],
       "properties": {
         "clientProtocol": "Encrypted",
+        "clusteringPolicy": "NoCluster",
         "port": 10000,
         "evictionPolicy": "VolatileLRU"
       }

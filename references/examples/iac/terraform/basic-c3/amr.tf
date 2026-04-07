@@ -5,7 +5,7 @@
 #   - Resource: azurerm_redis_cache → azurerm_managed_redis (single resource with inline database)
 #   - SKU: Basic/C/3 → Balanced_B5
 #   - Eviction: noeviction → NoEviction (PascalCase)
-#   - Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)
+#   - Clustering: Non-clustered (clustering_policy: NoCluster — source non-clustered, target ≤ 24GB)
 #   - Port: 6380 → 10000
 #   - Removed: enable_non_ssl_port, redis_version, redis_configuration block, minimum_tls_version
 #   - Added: client_protocol Encrypted, default_database block
@@ -23,6 +23,7 @@ resource "azurerm_managed_redis" "this" {
 
   default_database {
     client_protocol   = "Encrypted"
+    clustering_policy = "NoCluster"
     eviction_policy   = "NoEviction"
   }
 

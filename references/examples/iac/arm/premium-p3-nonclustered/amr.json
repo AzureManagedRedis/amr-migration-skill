@@ -9,7 +9,7 @@
       "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
       "SKU: Premium/P/3 → Balanced_B20",
       "Eviction: volatile-ttl → VolatileTTL (PascalCase)",
-      "Clustering: omitted — B20 (24GB) ≤ 24GB threshold, non-clustered mode supported per §6 rules",
+      "Clustering: NoCluster — B20 (24GB) ≤ 24GB threshold, non-clustered mode supported per §6 rules",
       "Port: 6380 → 10000",
       "Removed: enableNonSslPort, redisVersion, redisConfiguration, maxmemory-reserved, maxfragmentationmemory-reserved",
       "Added: clientProtocol Encrypted, database resource"
@@ -45,6 +45,7 @@
       ],
       "properties": {
         "clientProtocol": "Encrypted",
+        "clusteringPolicy": "NoCluster",
         "port": 10000,
         "evictionPolicy": "VolatileTTL"
       }

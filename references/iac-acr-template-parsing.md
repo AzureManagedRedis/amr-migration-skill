@@ -86,6 +86,7 @@ Example values (these vary per deployment — do not treat as universal):
 | `staticIP` | string | absent | Premium VNet-injected only. Not available in AMR — note for client IP dependency awareness. |
 | `subnetId` | string | absent | Resource ID of the VNet subnet. Premium only. VNet injection is not available in AMR — must convert to Private Endpoint. |
 | `patchSchedule` | array | absent | Scheduled patching windows. Each entry has `dayOfWeek` and `startHourUtc`. **Must convert** to AMR `maintenanceConfiguration.maintenanceWindows[]` on the cluster resource (preview, API `2025-08-01-preview`). See [AMR template structure §7a](iac-amr-template-structure.md#7a-scheduled-maintenance-mapping) for full conversion rules. |
+| `disableAccessKeyAuthentication` | bool | `false` | If `true`, access key (password) authentication is disabled — Entra ID (AAD) only. **Maps to AMR** `accessKeysAuthentication` on the database resource: `true` → `"Disabled"`, `false`/absent → `"Enabled"`. |
 | `zones` | array | absent | Availability zones, e.g., `["1", "2", "3"]`. |
 
 ### Redis Configuration Block
@@ -113,6 +114,7 @@ Under `properties.redisConfiguration`:
 | `aof-backup-enabled` | string or bool | ✅ Maps to `persistence.aofEnabled` | `"true"` / `"false"` or `true` / `false` |
 | `aof-storage-connection-string-0` | string | ❌ Not needed | Primary storage connection. **Not available in AMR** — managed internally. |
 | `aof-storage-connection-string-1` | string | ❌ Not needed | Secondary storage connection. **Not available in AMR** — managed internally. |
+| `notify-keyspace-events` | string | `""` | ⚠️ **Not available in AMR.** Keyspace notifications are supported in ACR but are **not currently available** in Azure Managed Redis. If this value is set (non-empty), **warn the user** that keyspace notification functionality will not be available after migration. |
 
 ### Identity Block
 

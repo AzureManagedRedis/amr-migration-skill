@@ -106,6 +106,7 @@
       ],
       "properties": {
         "clientProtocol": "[parameters('clientProtocol')]",
+        "clusteringPolicy": "NoCluster",
         "port": "[parameters('port')]",
         "evictionPolicy": "[parameters('evictionPolicy')]",
         "modules": []
