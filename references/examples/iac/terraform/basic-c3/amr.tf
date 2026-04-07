@@ -14,7 +14,8 @@ resource "azurerm_managed_redis" "this" {
   name                = "my-basic-cache"
   location            = "westus2"
   resource_group_name = "my-rg"
-  sku_name            = "Balanced_B5"
+  sku_name              = "Balanced_B5"
+  public_network_access = "Enabled"
 
   identity {
     type = "SystemAssigned"

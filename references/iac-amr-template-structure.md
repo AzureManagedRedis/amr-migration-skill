@@ -549,8 +549,8 @@ If a `skuName` parameter already exists, change its `defaultValue` from the ACR 
 ### Outputs
 
 - **Remove** outputs that reference `Microsoft.Cache/redis` properties:
-  - `hostName` — does not exist on `Microsoft.Cache/redisEnterprise`. Construct it using `concat()`:
-    > ⚠️ **Do NOT use** `reference('cacheName').hostName` — that property does not exist on the `redisEnterprise` RP response and will fail at deploy time. Use the `concat()` pattern instead:
+  - `hostName` — construct using `concat()` instead of `reference()`:
+    > ⚠️ **Prefer `concat()` over `reference().hostName`**. While `hostName` is a valid read-only property on the `redisEnterprise` RP response, the `concat()` pattern is preferred because it avoids an implicit deployment dependency and works when the cache is deployed in a separate template. The AMR hostname format is deterministic: `<name>.<location>.redis.azure.net`.
     > ```json
     > "hostName": {
     >   "type": "string",
@@ -612,8 +612,8 @@ resource "azurerm_managed_redis" "this" {
 
 | Attribute | Maps From | Notes |
 |---|---|---|
-| `client_protocol` | — | Always `"Encrypted"` |
-| `clustering_policy` | — | `"EnterpriseCluster"` or `"OSSCluster"` |
+| `client_protocol` | `enable_non_ssl_port` | `"Encrypted"` (default). If source had `enable_non_ssl_port = true`, use `"Plaintext"` |
+| `clustering_policy` | — | `"EnterpriseCluster"`, `"OSSCluster"`, or **omit** for non-clustered ≤ 24GB (see [Section 6](#6-clustering-policy-decision-matrix)) |
 | `eviction_policy` | `maxmemory_policy` | PascalCase (e.g., `"VolatileLRU"`) |
 | `persistence_redis_database_backup_frequency` | `rdb_backup_frequency` | `"1h"`, `"6h"`, or `"12h"` |
 | `persistence_append_only_file_backup_frequency` | `aof_backup_enabled` | `"1s"` or `"always"` |

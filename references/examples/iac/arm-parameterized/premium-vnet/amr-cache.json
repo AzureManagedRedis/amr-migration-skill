@@ -162,7 +162,7 @@
     },
     "cacheHostName": {
       "type": "string",
-      "value": "[reference(parameters('redisCacheName')).hostName]"
+      "value": "[concat(parameters('redisCacheName'), '.', parameters('location'), '.redis.azure.net')]"
     },
     "privateEndpointId": {
       "type": "string",

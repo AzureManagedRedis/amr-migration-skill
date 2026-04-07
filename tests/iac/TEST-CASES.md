@@ -182,12 +182,12 @@ These have separate template + parameters files. The AI must read **both** files
 | **Source Params** | `arm-parameterized/standard-c2/acr-cache.parameters.json` |
 | **Expected Template** | `arm-parameterized/standard-c2/amr-cache.json` |
 | **Expected Params** | `arm-parameterized/standard-c2/amr-cache.parameters.json` |
-| **ACR Config** | Standard C2 (6 GB), `allkeys-lru`, no Premium features |
+| **ACR Config** | Standard C2 (2.5 GB), `allkeys-lru`, no Premium features |
 
 **Validations:**
 - [ ] Reads parameters file to determine actual SKU (Standard C2, not Premium default)
-- [ ] SKU → `Balanced_B5`
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
+- [ ] SKU → `Balanced_B3`
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 3GB ≤ 24GB)
 - [ ] Eviction: `allkeys-lru` → `AllKeysLRU`
 - [ ] Outputs **both** template + parameters files
 - [ ] No Premium-only params in output (no persistence, VNet, shardCount)
@@ -349,11 +349,11 @@ These have separate template + parameters files. The AI must read **both** files
 |---|---|
 | **Source** | `arm/standard-nontls/acr.json` |
 | **Expected** | `arm/standard-nontls/amr.json` |
-| **ACR Config** | Standard C2 (6 GB), `enableNonSslPort: true`, `allkeys-lru` |
+| **ACR Config** | Standard C2 (2.5 GB), `enableNonSslPort: true`, `allkeys-lru` |
 
 **Validations:**
-- [ ] SKU → `Balanced_B5`
-- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 6GB ≤ 24GB)
+- [ ] SKU → `Balanced_B3`
+- [ ] Clustering: Non-clustered (omit `clusteringPolicy` — source non-clustered, target 3GB ≤ 24GB)
 - [ ] Protocol: `enableNonSslPort: true` → `clientProtocol: "Plaintext"` (NOT `"Encrypted"`)
 - [ ] Port: 10000 (always 10000 for AMR regardless of protocol)
 - [ ] Eviction: `allkeys-lru` → `AllKeysLRU`
