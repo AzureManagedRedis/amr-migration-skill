@@ -1,0 +1,81 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Standard C2 → AMR Balanced_B3 with scheduled maintenance",
+    "_migratedFrom": "Standard C2 (2.5 GB) with patchSchedule",
+    "_targetSkuInfo": "Balanced_B3 (comparable to Standard C2)",
+    "_changes": [
+      "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
+      "SKU: Standard/C/2 → Balanced_B3",
+      "Eviction: allkeys-lru → AllKeysLRU (PascalCase)",
+      "Clustering: Non-clustered (omitted — source non-clustered, target ≤ 24GB)",
+      "Port: 6380 → 10000",
+      "Removed: enableNonSslPort, redisVersion, redisConfiguration, patchSchedules child resource",
+      "Added: clientProtocol Encrypted, database resource",
+      "Converted: patchSchedule → maintenanceConfiguration.maintenanceWindows[] (preview, API 2025-08-01-preview)"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-08-01-preview",
+      "name": "my-patched-cache",
+      "location": "eastus",
+      "tags": {
+        "Environment": "Production",
+        "Team": "Backend"
+      },
+      "sku": {
+        "name": "Balanced_B3"
+      },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled",
+        "maintenanceConfiguration": {
+          "maintenanceWindows": [
+            {
+              "type": "Weekly",
+              "startHourUtc": 2,
+              "duration": "PT5H",
+              "schedule": {
+                "dayOfWeek": "Tuesday"
+              }
+            },
+            {
+              "type": "Weekly",
+              "startHourUtc": 4,
+              "duration": "PT5H",
+              "schedule": {
+                "dayOfWeek": "Saturday"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-08-01-preview",
+      "name": "my-patched-cache/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-patched-cache')]"
+      ],
+      "properties": {
+        "clientProtocol": "Encrypted",
+        "port": 10000,
+        "evictionPolicy": "AllKeysLRU"
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-patched-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[concat('my-patched-cache', '.eastus.redis.azure.net')]"
+    }
+  }
+}

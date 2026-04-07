@@ -39,7 +39,8 @@ Check [Feature Comparison](feature-comparison.md) for features that change or ar
 - **VNet injection → Private Endpoint**: Source `subnetId` requires a PE resource in the output
 - **Geo-replication**: ACR `linkedServers` (passive) should be auto-converted to AMR active geo-replication (active-active model). The output supports writes on all linked caches. See [AMR template structure §7](iac-amr-template-structure.md#7-removed-properties).
 - **Eviction policy**: Convert ACR `maxmemory-policy` to AMR `evictionPolicy` (PascalCase). Do not remove — it maps directly.
-- **Removed properties**: `redisVersion`, `replicasPerPrimary`, memory reservation configs, `patchSchedule`, `staticIP`
+- **Removed properties**: `redisVersion`, `replicasPerPrimary`, memory reservation configs, `staticIP`
+- **Scheduled patching**: ACR `patchSchedule` converts to AMR `maintenanceConfiguration.maintenanceWindows[]` (preview, API `2025-08-01-preview`). Map each day+hour entry to a weekly maintenance window with minimum 4h duration.
 
 ## Step 5: ⛔ Customer Confirmation Gate
 

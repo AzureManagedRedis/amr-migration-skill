@@ -85,7 +85,7 @@ Example values (these vary per deployment — do not treat as universal):
 | `publicNetworkAccess` | string | `"Enabled"` | `"Enabled"` or `"Disabled"`. Preserve in AMR output if `"Disabled"`. |
 | `staticIP` | string | absent | Premium VNet-injected only. Not available in AMR — note for client IP dependency awareness. |
 | `subnetId` | string | absent | Resource ID of the VNet subnet. Premium only. VNet injection is not available in AMR — must convert to Private Endpoint. |
-| `patchSchedule` | array | absent | Scheduled patching windows. Each entry has `dayOfWeek` and `startHourUtc`. Not available in AMR — AMR manages patching automatically. |
+| `patchSchedule` | array | absent | Scheduled patching windows. Each entry has `dayOfWeek` and `startHourUtc`. **Must convert** to AMR `maintenanceConfiguration.maintenanceWindows[]` on the cluster resource (preview, API `2025-08-01-preview`). See [AMR template structure §7a](iac-amr-template-structure.md#7a-scheduled-maintenance-mapping) for full conversion rules. |
 | `zones` | array | absent | Availability zones, e.g., `["1", "2", "3"]`. |
 
 ### Redis Configuration Block
@@ -151,7 +151,7 @@ Scan the full `resources` array for these related resource types:
 |---------------|---------------|
 | `Microsoft.Cache/redis/firewallRules` | Firewall rules on the cache. **Not available in AMR** — must use Private Endpoint + NSG instead. |
 | `Microsoft.Cache/redis/linkedServers` | Geo-replication links |
-| `Microsoft.Cache/redis/patchSchedules` | Scheduled patching windows. **Not available in AMR** — AMR manages patching automatically. |
+| `Microsoft.Cache/redis/patchSchedules` | Scheduled patching windows. Convert to `maintenanceConfiguration.maintenanceWindows[]` on the AMR cluster resource (preview, API `2025-08-01-preview`). |
 | `Microsoft.Network/privateEndpoints` with `"redisCache"` in `groupIds` | Existing private endpoint |
 
 For firewall rules, each resource has `properties.startIP` and `properties.endIP`. Note that firewall rules are **not available in AMR** — advise the user to use NSG rules on the Private Endpoint subnet instead. For private endpoints, check the `privateLinkServiceConnections[].groupIds` array for `"redisCache"`.
@@ -392,7 +392,7 @@ resource "azurerm_private_endpoint" "example" {
 }
 ```
 
-Geo-replication uses `azurerm_redis_linked_server`. Scheduled patching uses the `patch_schedule` block inside `azurerm_redis_cache` — this is not available in AMR.
+Geo-replication uses `azurerm_redis_linked_server`. Scheduled patching uses the `patch_schedule` block inside `azurerm_redis_cache` — convert to `maintenance_configuration` on the AMR cluster resource (preview). Note: Terraform support for this property may require an updated `azurerm` provider version.
 
 ---
 
@@ -411,7 +411,7 @@ After extracting all properties, determine which features are active. This table
 | **Geo-replication** | Child resources of type `linkedServers` present | Convert to AMR active geo-replication (active-active model) |
 | **Managed identity** | `identity` block is present | Preserved in the AMR cluster resource |
 | **Non-SSL port** | `enableNonSslPort` = `true` | Convert to AMR `clientProtocol` setting. AMR supports a "Non-TLS access only" mode. |
-| **Scheduled patching** | `patchSchedule` child resource or property present | Not available in AMR — AMR manages patching automatically. Remove and note for user. |
+| **Scheduled patching** | `patchSchedule` child resource or property present | Convert to AMR `maintenanceConfiguration.maintenanceWindows[]` (preview). Map each ACR `dayOfWeek`+`startHourUtc` entry to an AMR maintenance window with `type: "Weekly"`, matching day, start hour, and a minimum 4-hour `duration`. Requires API `2025-08-01-preview`. |
 | **Availability zones** | `zones` array is present and non-empty | Do NOT include in AMR — zone redundancy is automatic |
 | **Diagnostic settings** | `Microsoft.Insights/diagnosticSettings` resources targeting the cache | These do not transfer directly to AMR. The resource ID and category names change for `Microsoft.Cache/redisEnterprise`. Advise the user to reconfigure diagnostics for the new AMR resource. |
 

@@ -235,12 +235,14 @@ These ACR properties have **no equivalent** in AMR and must be removed during tr
 | `maxmemory-delta` | AMR manages memory internally | None |
 | `maxmemory-policy` | Replaced by `evictionPolicy` on database resource | Convert to AMR `evictionPolicy` (PascalCase) — see [Section 4](#4-eviction-policy-mapping) |
 | `aad-enabled` | AMR supports Entra (AAD) auth through its own mechanism | AMR has native Entra ID support configured differently — not via `aad-enabled`. Preserve the `identity` block on the cluster resource. Advise user to configure Entra auth separately |
-| `patchSchedule` | Not available in AMR | AMR manages patching automatically |
+| `patchSchedule` | Converted to `maintenanceConfiguration` | Map each ACR `dayOfWeek`+`startHourUtc` entry to an AMR `maintenanceWindows[]` entry with `type: "Weekly"`, matching day, start hour, and minimum 4h `duration` (e.g., `"PT5H"`). Requires API `2025-08-01-preview`. See [Section 7a](#7a-scheduled-maintenance-mapping). |
 | `rdb-storage-connection-string` | AMR manages persistence storage | None — managed internally |
 | `aof-storage-connection-string-0` | AMR manages persistence storage | None — managed internally |
 | `aof-storage-connection-string-1` | AMR manages persistence storage | None — managed internally |
 
 **Rule:** If any of these properties appear as parameter references, those parameters must also be removed from the parameters section.
+
+> ⚠️ **patchSchedule requires special handling** — Do NOT simply remove it. If the source template contains a `Microsoft.Cache/redis/patchSchedules` child resource or a `patchSchedule` property, you MUST convert it to `maintenanceConfiguration` on the AMR cluster resource AND change the API version to `2025-08-01-preview`. See [Section 7a](#7a-scheduled-maintenance-mapping) for the full conversion rules.
 
 ### Geo-Replication Conversion
 
@@ -257,6 +259,100 @@ If the source template contains `linkedServers`:
 - B0, B1, and Flash Optimized SKUs do not support geo-replication
 - All caches in the geo-replication group must have identical configuration (SKU, eviction policy, clustering policy, modules, TLS settings)
 - Only **RediSearch** and **RedisJSON** modules are supported with geo-replication
+
+---
+
+## 7a. Scheduled Maintenance Mapping
+
+> **Status**: Preview (launched November 2025). Requires API version `2025-08-01-preview`.
+
+ACR uses `patchSchedule` (a child resource `Microsoft.Cache/redis/patchSchedules` or inline property) with entries specifying `dayOfWeek` and `startHourUtc`. AMR replaces this with `maintenanceConfiguration.maintenanceWindows[]` on the cluster resource.
+
+### Conversion Rules
+
+1. **Map each ACR patch schedule entry** to an AMR `maintenanceWindows[]` entry
+2. **Set `type`** to `"Weekly"` (only supported type)
+3. **Copy `dayOfWeek`** directly (same enum values: `Monday`, `Tuesday`, etc.)
+4. **Copy `startHourUtc`** directly (same 0-23 range)
+5. **Set `duration`** to `"PT5H"` (minimum is 4 hours; 5h is a safe default)
+6. **Ensure minimum requirements**: At least 2 windows per week, 18 hours total per week
+
+### ARM JSON Example
+
+**ACR source** (child resource):
+```json
+{
+  "type": "Microsoft.Cache/redis/patchSchedules",
+  "apiVersion": "2024-03-01",
+  "name": "[concat(parameters('cacheName'), '/default')]",
+  "properties": {
+    "scheduleEntries": [
+      { "dayOfWeek": "Tuesday", "startHourUtc": 2 },
+      { "dayOfWeek": "Saturday", "startHourUtc": 4 }
+    ]
+  }
+}
+```
+
+**AMR output** (inline on cluster resource):
+```json
+"properties": {
+  "maintenanceConfiguration": {
+    "maintenanceWindows": [
+      {
+        "type": "Weekly",
+        "startHourUtc": 2,
+        "duration": "PT5H",
+        "schedule": { "dayOfWeek": "Tuesday" }
+      },
+      {
+        "type": "Weekly",
+        "startHourUtc": 4,
+        "duration": "PT5H",
+        "schedule": { "dayOfWeek": "Saturday" }
+      }
+    ]
+  }
+}
+```
+
+### Bicep Example
+
+```bicep
+properties: {
+  maintenanceConfiguration: {
+    maintenanceWindows: [
+      {
+        type: 'Weekly'
+        startHourUtc: 2
+        duration: 'PT5H'
+        schedule: { dayOfWeek: 'Tuesday' }
+      }
+      {
+        type: 'Weekly'
+        startHourUtc: 4
+        duration: 'PT5H'
+        schedule: { dayOfWeek: 'Saturday' }
+      }
+    ]
+  }
+}
+```
+
+### Terraform Note
+
+Terraform `azurerm` provider support for `maintenance_configuration` on `azurerm_redis_enterprise_cluster` may require an updated provider version. If not yet supported, include a comment in the generated template:
+
+```hcl
+# TODO: maintenance_configuration — AMR supports scheduled maintenance (preview).
+# Terraform provider support pending. Configure via Azure portal or ARM API 2025-08-01-preview.
+```
+
+### Edge Cases
+
+- **Single-entry schedule**: ACR allows a single day. AMR requires ≥2 windows/week with ≥18h total. If the source has only 1 entry, add a second window on a different day (choose a day 3-4 days apart) and note this for the user.
+- **`maintenanceWindow` property absent in ACR**: If no `patchSchedule` exists in the source, do NOT add `maintenanceConfiguration` to the AMR output — Azure will manage maintenance automatically.
+- **API version**: The generated template must use `2025-08-01-preview` or later if `maintenanceConfiguration` is included.
 
 ---
 
@@ -361,7 +457,7 @@ These parameters are no longer needed in AMR and should be deleted:
 - `maxmemoryReserved`
 - `maxfragmentationmemoryReserved`
 - `maxmemoryDelta`
-- `patchSchedule` — AMR manages patching automatically
+- `patchSchedule` — **do NOT just remove**: convert to `maintenanceConfiguration.maintenanceWindows[]` on cluster resource and use API `2025-08-01-preview` (see [Section 7a](#7a-scheduled-maintenance-mapping))
 
 ### Parameters to Convert (not just remove)
 
@@ -536,7 +632,7 @@ These ACR attributes do not exist on the AMR resource — remove or convert them
 - `redis_version` — not applicable
 - `shard_count`, `replicas_per_primary` — not exposed in AMR
 - `redis_configuration` block — replaced by `default_database` block; convert `maxmemory_policy` to `eviction_policy`
-- `patch_schedule` — not available in AMR
+- `patch_schedule` — convert to `maintenance_configuration` block on the AMR cluster resource (preview). See [Section 7a](#7a-scheduled-maintenance-mapping).
 
 ---
 

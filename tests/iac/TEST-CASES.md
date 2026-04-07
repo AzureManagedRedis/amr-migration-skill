@@ -401,6 +401,27 @@ These have separate template + parameters files. The AI must read **both** files
 
 ---
 
+### TC-18: Standard C2 with Scheduled Patching
+
+| | |
+|---|---|
+| **Source** | `arm/standard-c2-patchschedule/acr.json` |
+| **Expected** | `arm/standard-c2-patchschedule/amr.json` |
+| **ACR Config** | Standard C2 (2.5 GB), `allkeys-lru`, `patchSchedule` with Tuesday 02:00 + Saturday 04:00 windows |
+
+**Validations:**
+- [ ] SKU → `Balanced_B3` (Standard C2 = 2.5 GB, maps to B3 per SKU table)
+- [ ] Clustering: omitted (non-clustered, target ≤ 24GB)
+- [ ] Eviction: `allkeys-lru` → `AllKeysLRU`
+- [ ] `patchSchedules` child resource removed — NOT carried as a separate AMR resource
+- [ ] `maintenanceConfiguration` present on cluster resource `properties`
+- [ ] Two `maintenanceWindows` entries: Tuesday/02:00/PT5H and Saturday/04:00/PT5H
+- [ ] Each window has `type: "Weekly"`, `startHourUtc`, `duration` (ISO 8601), and `schedule.dayOfWeek`
+- [ ] API version: `2025-08-01-preview` (required for `maintenanceConfiguration`)
+- [ ] Tags preserved: `Environment`, `Team`
+
+---
+
 ## Test Coverage Matrix
 
 | Feature | Concrete | Parameterized | Bicep | Terraform |
@@ -422,3 +443,4 @@ These have separate template + parameters files. The AI must read **both** files
 | enableNonSslPort → Plaintext | TC-15 | — | — | — |
 | Geo-replication conversion | TC-16 | — | — | — |
 | Non-clustered >24GB boundary | TC-17 | — | — | — |
+| Scheduled patching → maintenance | TC-18 | — | — | — |
