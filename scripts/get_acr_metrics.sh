@@ -3,7 +3,7 @@ set -euo pipefail
 # Get Azure Cache for Redis metrics to help with AMR SKU selection
 # Usage: ./get_acr_metrics.sh <subscriptionId> <resourceGroup> <cacheName> [days]
 #
-# Requires: Azure CLI logged in (az login), python3, curl
+# Requires: Azure CLI logged in (az login), python3
 #
 # Retrieves Peak, P95 and Average values for last N days (default 7):
 #   - Used Memory RSS (bytes and GB)
@@ -63,13 +63,6 @@ echo "Cache Name:     $CACHE_NAME"
 echo "Time Range:     Last $DAYS days"
 echo ""
 
-# Get access token using Azure CLI (|| true prevents set -e from aborting before our check)
-TOKEN=$(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv 2>/dev/null) || true
-if [ -z "$TOKEN" ]; then
-    echo "ERROR: Failed to get access token. Please run 'az login' first."
-    exit 1
-fi
-
 # Detect shard count for clustered Premium caches
 # Use -o json | tail -1 to handle noisy stdout from cross-platform az CLI (e.g., WSL proxying to Windows)
 SHARD_COUNT=$(az redis show -n "$CACHE_NAME" -g "$RESOURCE_GROUP" --subscription "$SUBSCRIPTION" --query "shardCount" -o json 2>/dev/null | tail -1 | tr -d '[:space:]')
@@ -94,26 +87,12 @@ fi
 echo "Querying metrics..."
 echo ""
 
-# Create a secure temp file and ensure cleanup on exit
-TMPFILE=$(mktemp /tmp/acr_metrics_XXXXXX.json)
-trap 'rm -f "$TMPFILE"' EXIT
-
-# Make the API call (--globoff prevents curl from interpreting [] and * as globs)
-# Token passed via stdin to avoid exposure in /proc/<pid>/cmdline
-HTTP_CODE=$(curl -s --globoff -o "$TMPFILE" -w "%{http_code}" -H @- "$URL" \
-    <<< "Authorization: Bearer $TOKEN")
-RESPONSE=$(cat "$TMPFILE")
-rm -f "$TMPFILE"
-unset TOKEN
-
-# Check for errors with specific messaging based on HTTP status
-if [[ "$HTTP_CODE" == "401" || "$HTTP_CODE" == "403" ]]; then
-    echo "ERROR: Authentication failed (HTTP $HTTP_CODE). Please run 'az login' first."
+# Make the API call using az rest (handles authentication automatically)
+RESPONSE=$(az rest --method GET --url "$URL" -o json 2>&1) || {
+    echo "ERROR: API request failed. Check credentials and resource parameters."
+    echo "Ensure you are logged in with 'az login' and have Reader access to the resource."
     exit 1
-elif [[ "$HTTP_CODE" != "200" ]]; then
-    echo "ERROR: API request failed (HTTP $HTTP_CODE). Check resource parameters."
-    exit 1
-fi
+}
 
 echo "------------------------------------------------------------"
 echo "METRICS RESULTS (over last $DAYS days)"

@@ -1,7 +1,7 @@
 # Get Azure Cache for Redis metrics to help with AMR SKU selection
 # Usage: .\get_acr_metrics.ps1 -SubscriptionId <id> -ResourceGroup <rg> -CacheName <name> [-Days <n>]
 #
-# Requires: Azure CLI logged in (az login)
+# Requires: Azure CLI logged in (az login) with 'az rest' support
 #
 # Retrieves Peak, P95 and Average values for last N days (default 7):
 #   - Used Memory RSS (bytes and GB)
@@ -43,21 +43,6 @@ Write-Host "Cache Name:     $CacheName"
 Write-Host "Time Range:     Last $Days days"
 Write-Host ""
 
-# Get access token using Azure CLI
-Write-Host "Fetching access token..."
-try {
-    $token = az account get-access-token --resource https://management.azure.com --query accessToken -o tsv 2>$null
-    if (-not $token) {
-        throw "No token returned"
-    }
-} catch {
-    Write-Host "ERROR: Failed to get access token. Please run 'az login' first." -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Token acquired successfully."
-Write-Host ""
-
 # Detect shard count for clustered Premium caches
 $shardCount = 0
 try {
@@ -86,15 +71,15 @@ if ($shardCount -gt 1) {
 Write-Host "Querying metrics..."
 Write-Host ""
 
-# Make the API call
-$headers = @{
-    "Authorization" = "Bearer $token"
-}
-
+# Make the API call using az rest (handles authentication automatically)
 try {
-    $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get
+    $response = az rest --method GET --url $url -o json 2>$null | ConvertFrom-Json
+    if (-not $response) {
+        throw "No response returned"
+    }
 } catch {
     Write-Host "ERROR: API request failed. Check credentials and resource parameters." -ForegroundColor Red
+    Write-Host "Ensure you are logged in with 'az login' and have Reader access to the resource." -ForegroundColor Red
     Write-Verbose $_.Exception.Message
     exit 1
 }
@@ -252,6 +237,3 @@ Write-Host "  - Server Load: High Server Load (>70%) with low memory suggests Co
 Write-Host "  - Connections: Check max connections supported by target SKU"
 Write-Host ""
 Write-Host "See references/sku-mapping.md for SKU selection guidance."
-
-# Clean up sensitive variables
-Remove-Variable -Name token, headers -ErrorAction SilentlyContinue
