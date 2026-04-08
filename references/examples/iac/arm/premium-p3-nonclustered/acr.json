@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P3 non-clustered — tests 24GB boundary (B20 = 24GB ≤ 24GB → non-clustered allowed)",
+    "_sourceSkuInfo": "Premium P3 (26 GB)"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "my-large-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "DataPlatform"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "sku": {
+          "name": "Premium",
+          "family": "P",
+          "capacity": 3
+        },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "redisVersion": "6",
+        "publicNetworkAccess": "Enabled",
+        "redisConfiguration": {
+          "maxmemory-policy": "volatile-ttl",
+          "aad-enabled": "true",
+          "maxmemory-reserved": "1300",
+          "maxfragmentationmemory-reserved": "1300"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', 'my-large-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[reference('my-large-cache').hostName]"
+    }
+  }
+}

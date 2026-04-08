@@ -1,0 +1,76 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P2 x3 shards with geo-replication → AMR Balanced_B50 with active-active geo-replication",
+    "_migratedFrom": "Premium P2 (13 GB) x 3 shards with passive geo-replication",
+    "_targetSkuInfo": "Balanced_B50 (comparable to Premium P2 x3 shards = 39 GB)",
+    "_changes": [
+      "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
+      "SKU: Premium/P/2 x 3 shards (39 GB) → Balanced_B50",
+      "Eviction: volatile-lru → VolatileLRU (PascalCase)",
+      "Clustering: EnterpriseCluster (source clustered, target > 24GB)",
+      "Port: 6380 → 10000",
+      "Geo-replication: linkedServers (passive) → geoReplication (active-active)",
+      "Note: AMR active-active allows writes to any linked cache — no harm if clients only write to one",
+      "Removed: enableNonSslPort, redisVersion, redisConfiguration, zones, shardCount, maxmemory-reserved, maxfragmentationmemory-reserved, linkedServers child resource",
+      "Added: clientProtocol Encrypted, database resource with geoReplication config"
+    ],
+    "_geoReplicationNote": "ACR passive geo-replication converted to AMR active geo-replication. See https://learn.microsoft.com/en-us/azure/redis/how-to-active-geo-replication"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-07-01",
+      "name": "my-geo-primary",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "GlobalApp",
+        "Role": "Primary"
+      },
+      "sku": {
+        "name": "Balanced_B50"
+      },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-07-01",
+      "name": "my-geo-primary/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-geo-primary')]"
+      ],
+      "properties": {
+        "clientProtocol": "Encrypted",
+        "port": 10000,
+        "evictionPolicy": "VolatileLRU",
+        "clusteringPolicy": "EnterpriseCluster",
+        "geoReplication": {
+          "groupNickname": "my-geo-primary-group",
+          "linkedDatabases": [
+            {
+              "id": "[resourceId('Microsoft.Cache/redisEnterprise/databases', 'my-geo-primary', 'default')]"
+            },
+            {
+              "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg-eastus/providers/Microsoft.Cache/redisEnterprise/my-geo-secondary/databases/default"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-geo-primary')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[concat('my-geo-primary', '.westus2.redis.azure.net')]"
+    }
+  }
+}

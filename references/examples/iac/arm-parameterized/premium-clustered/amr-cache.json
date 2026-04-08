@@ -1,0 +1,138 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migrationSource": "ACR Premium P2 × 3 shards (39 GB) → AMR Balanced_B50 (39 GB)",
+    "_changes": [
+      "Resource split: Microsoft.Cache/redis → redisEnterprise cluster + databases/default",
+      "SKU: Premium/P/2 × 3 shards → Balanced_B50 (39 GB equivalent)",
+      "Eviction: volatile-lru → VolatileLRU (PascalCase)",
+      "Persistence: RDB 60min → rdbFrequency: 1h, storage connection string removed (AMR managed)",
+      "Clustering: EnterpriseCluster default (override to OSSCluster if client is cluster-aware)",
+      "Port: 6380 → 10000, clientProtocol: Encrypted",
+      "Firewall rules: REMOVED — not supported in AMR, use Private Endpoint + NSG",
+      "Removed params: enableNonSslPort, redisVersion, aadEnabled, shardCount, replicasPerPrimary, maxmemoryReserved, maxfragmentationmemoryReserved, rdbStorageConnectionString, firewallRules, skuFamily",
+      "Preserved: name, location, tags, identity (SystemAssigned), minimumTlsVersion, publicNetworkAccess",
+      "Zones: REMOVED — AMR manages zone redundancy automatically",
+      "Added params: amrSkuName, clusteringPolicy, clientProtocol, port, rdbFrequency, evictionPolicy"
+    ]
+  },
+  "parameters": {
+    "redisCacheName": {
+      "type": "string",
+      "metadata": { "description": "Name of the Azure Managed Redis instance." }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": { "description": "Azure region." }
+    },
+    "amrSkuName": {
+      "type": "string",
+      "defaultValue": "Balanced_B50",
+      "metadata": { "description": "AMR SKU name (compound format)." }
+    },
+    "minimumTlsVersion": {
+      "type": "string",
+      "defaultValue": "1.2",
+      "metadata": { "description": "Minimum TLS version." }
+    },
+    "publicNetworkAccess": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": ["Enabled", "Disabled"],
+      "metadata": { "description": "Public network access." }
+    },
+    "clusteringPolicy": {
+      "type": "string",
+      "defaultValue": "EnterpriseCluster",
+      "allowedValues": ["EnterpriseCluster", "OSSCluster"],
+      "metadata": { "description": "Clustering policy. Use OSSCluster only if client is cluster-aware." }
+    },
+    "evictionPolicy": {
+      "type": "string",
+      "defaultValue": "VolatileLRU",
+      "allowedValues": [
+        "VolatileLRU", "AllKeysLRU", "VolatileLFU", "AllKeysLFU",
+        "VolatileRandom", "AllKeysRandom", "VolatileTTL", "NoEviction"
+      ],
+      "metadata": { "description": "Eviction policy (PascalCase)." }
+    },
+    "clientProtocol": {
+      "type": "string",
+      "defaultValue": "Encrypted",
+      "allowedValues": ["Encrypted", "Plaintext"],
+      "metadata": { "description": "Client protocol. Always Encrypted for production." }
+    },
+    "port": {
+      "type": "int",
+      "defaultValue": 10000,
+      "metadata": { "description": "Redis port." }
+    },
+    "rdbEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": { "description": "Enable RDB persistence." }
+    },
+    "rdbFrequency": {
+      "type": "string",
+      "defaultValue": "1h",
+      "allowedValues": ["1h", "6h", "12h"],
+      "metadata": { "description": "RDB snapshot frequency." }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": { "description": "Resource tags." }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-07-01",
+      "name": "[parameters('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "sku": {
+        "name": "[parameters('amrSkuName')]"
+      },
+      "properties": {
+        "minimumTlsVersion": "[parameters('minimumTlsVersion')]",
+        "publicNetworkAccess": "[parameters('publicNetworkAccess')]"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-07-01",
+      "name": "[concat(parameters('redisCacheName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "clientProtocol": "[parameters('clientProtocol')]",
+        "port": "[parameters('port')]",
+        "clusteringPolicy": "[parameters('clusteringPolicy')]",
+        "evictionPolicy": "[parameters('evictionPolicy')]",
+        "persistence": "[if(parameters('rdbEnabled'), createObject('rdbEnabled', 'true', 'rdbFrequency', parameters('rdbFrequency')), createObject())]",
+        "modules": []
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]"
+    },
+    "cacheHostName": {
+      "type": "string",
+      "value": "[concat(parameters('redisCacheName'), '.', parameters('location'), '.redis.azure.net')]"
+    },
+    "cachePort": {
+      "type": "int",
+      "value": "[parameters('port')]"
+    }
+  }
+}

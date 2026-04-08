@@ -1,0 +1,173 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migrationSource": "ACR Premium P1 + VNet injection (6 GB) → AMR Balanced_B5 (6 GB) + Private Endpoint",
+    "_changes": [
+      "Resource split: Microsoft.Cache/redis → redisEnterprise cluster + databases/default",
+      "SKU: Premium/P/1 → Balanced_B5",
+      "Eviction: volatile-lru → VolatileLRU (PascalCase)",
+      "Networking: VNet injection (subnetId) → Private Endpoint resource",
+      "DNS zone: privatelink.redis.cache.windows.net → privatelink.redis.azure.net",
+      "groupIds: redisCache → redisEnterprise",
+      "staticIP: REMOVED — not applicable to AMR (Private Endpoint manages IP)",
+      "Firewall rules: REMOVED — not supported in AMR, use Private Endpoint + NSG",
+      "Port: 6380 → 10000, clientProtocol: Encrypted",
+      "Removed params: enableNonSslPort, redisVersion, aadEnabled, skuName, skuFamily, skuCapacity, subnetId, staticIP, maxmemoryReserved, maxfragmentationmemoryReserved, firewallRules",
+      "Added params: amrSkuName, privateEndpointSubnetId, privateDnsZoneId, evictionPolicy, clientProtocol, port",
+      "Preserved: name, location, tags, identity, minimumTlsVersion, publicNetworkAccess (Disabled)",
+      "Zones: REMOVED — AMR manages zone redundancy automatically"
+    ]
+  },
+  "parameters": {
+    "redisCacheName": {
+      "type": "string",
+      "metadata": { "description": "Name of the Azure Managed Redis instance." }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": { "description": "Azure region." }
+    },
+    "amrSkuName": {
+      "type": "string",
+      "defaultValue": "Balanced_B5",
+      "metadata": { "description": "AMR SKU name." }
+    },
+    "minimumTlsVersion": {
+      "type": "string",
+      "defaultValue": "1.2",
+      "metadata": { "description": "Minimum TLS version." }
+    },
+    "publicNetworkAccess": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "allowedValues": ["Enabled", "Disabled"],
+      "metadata": { "description": "Public network access." }
+    },
+    "privateEndpointSubnetId": {
+      "type": "string",
+      "metadata": { "description": "Subnet resource ID for Private Endpoint (replaces VNet injection subnetId)." }
+    },
+    "privateDnsZoneId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": { "description": "Private DNS Zone resource ID for privatelink.redis.azure.net." }
+    },
+    "evictionPolicy": {
+      "type": "string",
+      "defaultValue": "VolatileLRU",
+      "allowedValues": [
+        "VolatileLRU", "AllKeysLRU", "VolatileLFU", "AllKeysLFU",
+        "VolatileRandom", "AllKeysRandom", "VolatileTTL", "NoEviction"
+      ],
+      "metadata": { "description": "Eviction policy (PascalCase)." }
+    },
+    "clientProtocol": {
+      "type": "string",
+      "defaultValue": "Encrypted",
+      "metadata": { "description": "Client protocol." }
+    },
+    "port": {
+      "type": "int",
+      "defaultValue": 10000,
+      "metadata": { "description": "Redis port." }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": { "description": "Resource tags." }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-07-01",
+      "name": "[parameters('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "sku": {
+        "name": "[parameters('amrSkuName')]"
+      },
+      "properties": {
+        "minimumTlsVersion": "[parameters('minimumTlsVersion')]",
+        "publicNetworkAccess": "[parameters('publicNetworkAccess')]"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-07-01",
+      "name": "[concat(parameters('redisCacheName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "clientProtocol": "[parameters('clientProtocol')]",
+        "clusteringPolicy": "NoCluster",
+        "port": "[parameters('port')]",
+        "evictionPolicy": "[parameters('evictionPolicy')]",
+        "modules": []
+      }
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('redisCacheName'), '-pe')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]"
+      ],
+      "properties": {
+        "subnet": {
+          "id": "[parameters('privateEndpointSubnetId')]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "[concat(parameters('redisCacheName'), '-pe-conn')]",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]",
+              "groupIds": ["redisEnterprise"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('privateDnsZoneId')))]",
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('redisCacheName'), '-pe/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', concat(parameters('redisCacheName'), '-pe'))]"
+      ],
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "privatelink-redis-azure-net",
+            "properties": {
+              "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', parameters('redisCacheName'))]"
+    },
+    "cacheHostName": {
+      "type": "string",
+      "value": "[concat(parameters('redisCacheName'), '.', parameters('location'), '.redis.azure.net')]"
+    },
+    "privateEndpointId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/privateEndpoints', concat(parameters('redisCacheName'), '-pe'))]"
+    }
+  }
+}

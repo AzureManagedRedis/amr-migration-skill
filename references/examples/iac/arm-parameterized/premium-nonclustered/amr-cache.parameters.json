@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_migrationSource": "Migrated from ACR Premium P1 non-clustered parameters",
+    "_removedParams": [
+      "enableNonSslPort — AMR is TLS-only",
+      "redisVersion — AMR runs Redis 7.4+",
+      "skuName/skuFamily/skuCapacity — replaced by amrSkuName",
+      "shardCount — AMR manages clustering internally",
+      "clusteringPolicy — non-clustered (source non-clustered, target ≤ 24GB)",
+      "replicasPerPrimary — AMR manages HA internally",
+      "maxmemoryReserved — AMR manages memory internally",
+      "maxfragmentationmemoryReserved — AMR manages memory internally",
+      "aadEnabled — AMR uses Entra ID natively"
+    ]
+  },
+  "parameters": {
+    "redisCacheName": {
+      "value": "api-cache-prod-centralus"
+    },
+    "location": {
+      "value": "centralus"
+    },
+    "amrSkuName": {
+      "value": "Balanced_B5"
+    },
+    "minimumTlsVersion": {
+      "value": "1.2"
+    },
+    "publicNetworkAccess": {
+      "value": "Disabled"
+    },
+    "evictionPolicy": {
+      "value": "VolatileTTL"
+    },
+    "clientProtocol": {
+      "value": "Encrypted"
+    },
+    "port": {
+      "value": 10000
+    },
+    "tags": {
+      "value": {
+        "Environment": "Production",
+        "Service": "API-Gateway",
+        "CostCenter": "CC-7700"
+      }
+    }
+  }
+}

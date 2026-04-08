@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Standard C2 with non-TLS port enabled — tests enableNonSslPort conversion",
+    "_sourceSkuInfo": "Standard C2 (2.5 GB)"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "my-nontls-cache",
+      "location": "eastus",
+      "tags": {
+        "Environment": "Development",
+        "Service": "LegacyApp"
+      },
+      "properties": {
+        "sku": {
+          "name": "Standard",
+          "family": "C",
+          "capacity": 2
+        },
+        "enableNonSslPort": true,
+        "minimumTlsVersion": "1.2",
+        "redisVersion": "6",
+        "publicNetworkAccess": "Enabled",
+        "redisConfiguration": {
+          "maxmemory-policy": "allkeys-lru"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', 'my-nontls-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[reference('my-nontls-cache').hostName]"
+    },
+    "primaryAccessKey": {
+      "type": "securestring",
+      "value": "[listKeys(resourceId('Microsoft.Cache/redis', 'my-nontls-cache'), '2024-03-01').primaryKey]"
+    }
+  }
+}

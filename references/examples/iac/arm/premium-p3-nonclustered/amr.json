@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P3 (26 GB) non-clustered → AMR Balanced_B20 non-clustered (B20 = 24GB ≤ 24GB threshold)",
+    "_migratedFrom": "Premium P3 (26 GB)",
+    "_targetSkuInfo": "Balanced_B20 (24 GB — fits within non-clustered limit)",
+    "_changes": [
+      "Resource type: Microsoft.Cache/redis → Microsoft.Cache/redisEnterprise + databases",
+      "SKU: Premium/P/3 → Balanced_B20",
+      "Eviction: volatile-ttl → VolatileTTL (PascalCase)",
+      "Clustering: NoCluster — B20 (24GB) ≤ 24GB threshold, non-clustered mode supported per §6 rules",
+      "Port: 6380 → 10000",
+      "Removed: enableNonSslPort, redisVersion, redisConfiguration, maxmemory-reserved, maxfragmentationmemory-reserved",
+      "Added: clientProtocol Encrypted, database resource"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redisEnterprise",
+      "apiVersion": "2025-07-01",
+      "name": "my-large-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "DataPlatform"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "sku": {
+        "name": "Balanced_B20"
+      },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redisEnterprise/databases",
+      "apiVersion": "2025-07-01",
+      "name": "my-large-cache/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redisEnterprise', 'my-large-cache')]"
+      ],
+      "properties": {
+        "clientProtocol": "Encrypted",
+        "clusteringPolicy": "NoCluster",
+        "port": 10000,
+        "evictionPolicy": "VolatileTTL"
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redisEnterprise', 'my-large-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[concat('my-large-cache', '.westus2.redis.azure.net')]"
+    }
+  }
+}

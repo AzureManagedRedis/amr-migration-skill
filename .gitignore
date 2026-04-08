@@ -1,0 +1,10 @@
+# Visual Studio
+.vs/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Deployment temp files
+.deploy-temp/

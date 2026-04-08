@@ -3,7 +3,8 @@ name: amr-migration-skill
 description: |
   Helps users migrate from Azure Cache for Redis (ACR) to Azure Managed Redis (AMR).
   Use when users ask about: Redis migration, AMR vs ACR features, SKU selection, 
-  migration best practices, feature compatibility, or Azure Redis cache upgrades.
+  migration best practices, feature compatibility, Azure Redis cache upgrades,
+  or IaC template migration (ARM, Bicep, Terraform).
 ---
 
 # Azure Managed Redis Migration Skill
@@ -41,12 +42,7 @@ Respond with:
 
 ## When to Use This Skill
 
-Activate this skill when the user:
-- Asks about migrating from Azure Cache for Redis to Azure Managed Redis
-- Wants to compare ACR features with AMR features
-- Needs help selecting the right AMR SKU for their workload
-- Has questions about feature compatibility between ACR and AMR
-- Wants to understand migration best practices and considerations
+Activate when the user asks about ACR → AMR migration, SKU selection, feature comparison, or IaC template conversion (Bicep/ARM/Terraform). See **Workflow Selection** below to determine which workflow to follow.
 
 ## Available Resources
 
@@ -120,6 +116,40 @@ See [Migration Overview](references/migration-overview.md) for detailed migratio
 - Connection string changes
 - Clustering policy and network isolation considerations
 
+### Infrastructure-as-Code (IaC) Template Migration
+For converting ACR templates (ARM, Bicep, Terraform) to AMR format, use these reference docs:
+- [ACR Template Parsing Guide](references/iac-acr-template-parsing.md) — How to read and extract configuration from ACR templates
+- [AMR Template Structure Guide](references/iac-amr-template-structure.md) — Transformation rules, property mappings, and output structure for AMR templates
+- [Example Templates](references/examples/iac/) — Before/after template pairs organized by format:
+  - `arm/` — 6 ARM JSON scenarios (basic, premium non-clustered, clustered, VNet, persistence, all-features)
+  - `arm-parameterized/` — 4 ARM JSON scenarios with separate parameter files
+  - `bicep/` — 2 Bicep scenarios (basic, premium clustered)
+  - `terraform/` — 2 Terraform scenarios (basic, premium clustered)
+
+## Workflow Selection
+
+**Choose the correct workflow based on the user's intent.** The two workflows are independent — do not mix their steps.
+
+| User Intent | Signal Phrases | Workflow |
+|---|---|---|
+| Move a live cache to AMR | "migrate cache", "move to AMR", "select SKU", "assess metrics", "migration strategy", "switch traffic" | **Migration Workflow** (Steps 1-4) |
+| Convert IaC templates to AMR format | "convert template", "Bicep migration", "ARM to AMR", "Terraform", "IaC", "template transformation", "region buildout" | **IaC Migration Workflow** (Steps 1-7) |
+| Compare features or answer general questions | "compare ACR vs AMR", "feature compatibility", "retirement date", "best practices" | Answer directly using reference docs — no workflow needed |
+
+### Ambiguous Requests
+
+If the user's intent is unclear (e.g., "help me migrate to AMR" could mean either), ask:
+
+> "Are you looking to **migrate a live cache** (data migration, SKU selection, traffic cutover) or **convert your infrastructure-as-code templates** (Bicep/ARM/Terraform) to AMR format? Or both?"
+
+### Both Workflows
+
+If the user needs both (e.g., "migrate everything including our IaC"):
+1. Run **Migration Workflow** first — this determines the target AMR SKU and validates sizing with metrics
+2. Then run **IaC Migration Workflow** — using the SKU selected in step 1 as the target
+
+---
+
 ## Migration Workflow
 
 ### Step 1: Assess Current Cache
@@ -181,6 +211,14 @@ Use these values to:
 2. Migrate data using appropriate method
 3. Validate data integrity
 4. Switch application traffic to new cache
+
+---
+
+## IaC Migration Workflow
+
+> For the full 7-step workflow, see [IaC Migration Workflow](references/iac-migration-workflow.md).
+
+Converts ACR templates (ARM JSON, Bicep, Terraform) to AMR format using AI-driven transformation with reference docs for grounding. Includes SKU mapping, pricing comparison, feature gap analysis, customer confirmation gate, and template generation. Scripts are only used for pricing lookups.
 
 ## Common Questions
 

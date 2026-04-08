@@ -1,0 +1,66 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Standard C2 with scheduled patching — tests patchSchedule → maintenanceConfiguration conversion",
+    "_sourceSkuInfo": "Standard C2 (2.5 GB)"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "my-patched-cache",
+      "location": "eastus",
+      "tags": {
+        "Environment": "Production",
+        "Team": "Backend"
+      },
+      "properties": {
+        "sku": {
+          "name": "Standard",
+          "family": "C",
+          "capacity": 2
+        },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "redisVersion": "6",
+        "publicNetworkAccess": "Enabled",
+        "redisConfiguration": {
+          "maxmemory-policy": "allkeys-lru"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redis/patchSchedules",
+      "apiVersion": "2024-03-01",
+      "name": "my-patched-cache/default",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', 'my-patched-cache')]"
+      ],
+      "properties": {
+        "scheduleEntries": [
+          {
+            "dayOfWeek": "Tuesday",
+            "startHourUtc": 2,
+            "maintenanceWindow": "PT5H"
+          },
+          {
+            "dayOfWeek": "Saturday",
+            "startHourUtc": 4,
+            "maintenanceWindow": "PT5H"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', 'my-patched-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[reference('my-patched-cache').hostName]"
+    }
+  }
+}

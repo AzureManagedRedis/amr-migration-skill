@@ -1,0 +1,81 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_scenario": "Premium P2 all features — clustering, RDB persistence, VNet, firewall, zones, MRPP",
+    "_sourceSkuInfo": "Premium P2 (13 GB) x 3 shards, 2 replicas per primary"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2024-03-01",
+      "name": "my-enterprise-cache",
+      "location": "westus2",
+      "tags": {
+        "Environment": "Production",
+        "Service": "PlatformCore",
+        "ManagedBy": "IaC",
+        "CostCenter": "99999"
+      },
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-persistence": {}
+        }
+      },
+      "properties": {
+        "sku": {
+          "name": "Premium",
+          "family": "P",
+          "capacity": 2
+        },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "redisVersion": "6",
+        "publicNetworkAccess": "Disabled",
+        "shardCount": 3,
+        "replicasPerPrimary": 2,
+        "subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-rg/providers/Microsoft.Network/virtualNetworks/my-vnet/subnets/redis-subnet",
+        "staticIP": "10.0.1.50",
+        "redisConfiguration": {
+          "maxmemory-policy": "volatile-lfu",
+          "aad-enabled": "true",
+          "rdb-backup-enabled": "true",
+          "rdb-backup-frequency": "360",
+          "rdb-storage-connection-string": "https://mystorageaccount.blob.core.windows.net",
+          "preferred-data-persistence-auth-method": "ManagedIdentity",
+          "storage-subscription-id": "00000000-0000-0000-0000-000000000000",
+          "maxmemory-reserved": "1024",
+          "maxfragmentationmemory-reserved": "1024"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redis/firewallRules",
+      "apiVersion": "2024-03-01",
+      "name": "my-enterprise-cache/AllowAppSubnet",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cache/redis', 'my-enterprise-cache')]"
+      ],
+      "properties": {
+        "startIP": "10.0.0.0",
+        "endIP": "10.0.255.255"
+      }
+    }
+  ],
+  "outputs": {
+    "cacheId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Cache/redis', 'my-enterprise-cache')]"
+    },
+    "hostName": {
+      "type": "string",
+      "value": "[reference('my-enterprise-cache').hostName]"
+    }
+  }
+}
