@@ -47,6 +47,8 @@ Key rules:
 
 ### ARM JSON Skeleton
 
+Example structure (values shown are illustrative — actual values depend on the source template and SKU mapping):
+
 ```json
 {
   "type": "Microsoft.Cache/redisEnterprise",
@@ -87,6 +89,8 @@ Key rules:
 ## 3. Database Resource Properties
 
 ### ARM JSON Skeleton
+
+Example structure (values shown are illustrative — actual values come from the source template transformation):
 
 ```json
 {
@@ -502,6 +506,8 @@ These parameters have AMR equivalents and should be transformed:
 
 ### Parameters to Add
 
+Example parameter definitions (default values shown are illustrative — set actual defaults based on the source template's SKU mapping and configuration):
+
 ```json
 {
   "skuName": {
@@ -582,6 +588,8 @@ If a `skuName` parameter already exists, change its `defaultValue` from the ACR 
 Use `azurerm_managed_redis` — the recommended resource for AMR (replaces the deprecated `azurerm_redis_enterprise_cluster` + `azurerm_redis_enterprise_database`). This single resource includes an inline `default_database` block for database configuration.
 
 ### Resource Structure
+
+Example (SKU name, identity type, and database settings vary based on source template — do not treat these values as universal):
 
 ```hcl
 resource "azurerm_managed_redis" "this" {

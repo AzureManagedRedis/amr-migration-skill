@@ -42,6 +42,8 @@ The API version varies across templates (e.g., `2023-08-01`, `2024-03-01`, etc.)
 
 The SKU block can appear at the resource root (`sku`) or nested under `properties.sku`. Check both locations.
 
+Example (values vary per deployment):
+
 ```json
 "sku": {
   "name": "Premium",
@@ -93,6 +95,8 @@ Example values (these vary per deployment — do not treat as universal):
 
 Under `properties.redisConfiguration`:
 
+Example (values vary per deployment — not all keys are always present):
+
 ```json
 "redisConfiguration": {
   "maxmemory-policy": "volatile-lru",
@@ -120,6 +124,8 @@ Under `properties.redisConfiguration`:
 
 At the resource root level (sibling to `properties`):
 
+Example (values vary per deployment):
+
 ```json
 "identity": {
   "type": "SystemAssigned, UserAssigned",
@@ -137,6 +143,8 @@ At the resource root level (sibling to `properties`):
 ### Tags
 
 At the resource root level:
+
+Example (values vary per deployment):
 
 ```json
 "tags": {
@@ -171,6 +179,8 @@ ARM templates use expressions like `[parameters('paramName')]` for dynamic value
 3. **Unresolvable**: If neither exists (or the expression is complex), preserve the expression and flag it for the user
 
 ### Parameters File Structure
+
+Example (parameter names and values vary per deployment):
 
 ```json
 {
@@ -222,6 +232,8 @@ When `redisConfiguration` is a variable reference like `[variables('redisConfigu
 
 Look for the resource declaration:
 
+Example (symbolic name, API version, and property values vary per deployment):
+
 ```bicep
 resource redisCache 'Microsoft.Cache/redis@2023-08-01' = {
   name: cacheName
@@ -243,7 +255,7 @@ The symbolic name (e.g., `redisCache`) varies. The resource type string `'Micros
 
 Property paths are identical to ARM JSON but use Bicep dot-notation syntax without brackets. The same extraction rules apply for `sku`, `properties`, `identity`, `tags`, and `zones`.
 
-Child resources may be declared as nested resources or separate resources with a `parent` property:
+Child resources may be declared as nested resources or separate resources with a `parent` property. Example child resource patterns:
 
 ```bicep
 // Nested
@@ -262,7 +274,7 @@ resource firewallRule 'Microsoft.Cache/redis/firewallRules@2023-08-01' = {
 
 ### Bicep Parameter Resolution
 
-Bicep parameters are declared with `param`:
+Example parameter declarations (values vary per deployment):
 
 ```bicep
 param cacheName string
@@ -273,6 +285,8 @@ param skuCapacity int = 2          // has default
 Actual values come from one of two file formats:
 
 **`.bicepparam` file** (newer format):
+
+Example (values vary per deployment):
 
 ```bicep
 using './main.bicep'
@@ -299,6 +313,8 @@ Resolution order:
 ### Resource Identification
 
 Look for the resource block:
+
+Example (attribute values vary per deployment):
 
 ```hcl
 resource "azurerm_redis_cache" "example" {
@@ -357,6 +373,8 @@ Variables use `var.name` syntax. Locals use `local.name`.
 Variable definitions appear in:
 - `variables.tf`: declares the variable with optional `default`
 - `*.tfvars` or `terraform.tfvars`: assigns values
+
+Example variable definitions (values vary per deployment):
 
 ```hcl
 # variables.tf
