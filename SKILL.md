@@ -49,6 +49,9 @@ This applies regardless of how the user phrased their request. Even if the user 
 
 For the bash script, always pass `--yes` when the agent runs it (since the agent cannot interact with the terminal prompt), but only after obtaining user confirmation through the `ask_user` tool first.
 
+### 🔍 Validate-Before-Migrate (Mandatory)
+Before executing **Migrate**, the agent **must** first run **Validate** with the same source and target resource IDs and present the results to the user. Do not proceed to Migrate if validation returns errors. If validation returns warnings, explain them and ask the user whether to proceed with `-ForceMigrate $true` (PowerShell) or `--force-migrate` (bash).
+
 ### Version Check (manual only — triggered by user request)
 Do **not** check for updates automatically. Only perform a version check when the user explicitly asks (e.g., "check for updates for the amr skill", "is there a newer version of amr-migration-skill?").
 

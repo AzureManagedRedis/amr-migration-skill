@@ -14,20 +14,19 @@
 #   ./azure-redis-migration-arm-rest-api-utility.sh --action <Action> [options]
 #
 # Actions:
-#   Migrate   - Initiate a migration from ACR to AMR
 #   Validate  - Validate whether a migration can be performed
+#   Migrate   - Initiate a migration from ACR to AMR
 #   Status    - Check the status of an ongoing migration
 #   Cancel    - Cancel/rollback a migration
 #
 # Options:
-#   --action, -a          Action to perform: Migrate, Validate, Status, or Cancel (required)
+#   --action, -a          Action to perform: Validate, Migrate, Status, or Cancel (required)
 #   --source, -s          Source ACR resource ID (required for Migrate, Validate)
 #   --target, -t          Target AMR resource ID (required for all actions)
 #   --force-migrate       Bypass validation warnings (default: false)
 #   --track               Wait for long-running operation to complete (default: false)
 #   --yes, -y             Skip confirmation prompt for destructive actions (Migrate, Cancel)
 #   --api-version         ARM API version (default: 2025-08-01-preview)
-#   --yes, -y             Skip confirmation prompt (for automation)
 #   --help, -h            Show this help message
 #
 # Examples:

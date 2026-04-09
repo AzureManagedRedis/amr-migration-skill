@@ -4,7 +4,7 @@
 .DESCRIPTION
     This script allows you to initiate, check the status of, or cancel a migration from an Azure Cache for Redis resource to Azure Managed Redis.
 .PARAMETER Action
-    The action to perform: "Migrate", "Status", or "Cancel".
+    The action to perform: "Validate", "Migrate", "Status", or "Cancel".
 .PARAMETER SourceResourceId
     The resource ID of the source Azure Cache for Redis resource.
 .PARAMETER TargetResourceId
@@ -13,19 +13,18 @@
     If set to $true, migration proceeds even when source/target cache parity validation returns warnings.
     If set to $false (default), migration is blocked when validation returns any warning.
 .PARAMETER Environment
-    The Azure environment to use (default is the public "AzureCloud").
-    Some possible values: "AzureCloud", "AzureChinaCloud", "AzureUSGovernment", "AzureGermanCloud".
+    The Azure environment to use. Currently only "AzureCloud" (public cloud) is supported.
 .PARAMETER TrackMigration
     If set, the script will wait for the migration operation to complete (default is $false).
 .PARAMETER Help
     If set, displays help information about the script (default is $false).
 .EXAMPLE
+    .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Validate -SourceResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/Redis/redis1" -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1"
+    Validates whether a migration can be performed between the source and target caches.
     .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Migrate -SourceResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/Redis/redis1" -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1" -TrackMigration
     Initiates a migration and tracks its progress.
     .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Migrate -SourceResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/Redis/redis1" -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1" -ForceMigrate $true
     Initiates a migration and forces migration when parity validation returns warnings.
-    .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Validate -SourceResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/Redis/redis1" -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1"
-    Validates whether a migration can be performed between the source and target caches.
     .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Status -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1"
     Checks the status of the migration.
     .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Cancel -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1"
@@ -38,7 +37,7 @@
 param
 (
     [Parameter()]
-    [ValidateSet("Migrate", "Validate", "Status", "Cancel")]
+    [ValidateSet("Validate", "Migrate", "Status", "Cancel")]
     [string] $Action,
 
     [Parameter()]
@@ -52,7 +51,7 @@ param
     [bool] $ForceMigrate = $false,
 
     [Parameter()]
-    [ValidateSet("AzureCloud", "AzureChinaCloud", "AzureUSGovernment", "AzureGermanCloud")]
+    [ValidateSet("AzureCloud")]
     [string] $Environment = "AzureCloud",
 
     [Parameter()]
