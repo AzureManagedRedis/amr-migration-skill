@@ -237,6 +237,15 @@ Use these values to:
 3. Verify connection limits are sufficient
 4. Use P95 values to distinguish sustained load from occasional spikes
 
+**Zone pinning check**: Also check if the source cache uses zone pinning:
+
+```bash
+az redis show -n <cache-name> -g <resource-group> -o json \
+  --query "{zones: zones, zonalAllocationPolicy: properties.zonalAllocationPolicy}"
+```
+
+If `zones` is set and `zonalAllocationPolicy` is `UserDefined`, the cache is **zone-pinned** — deployed to specific availability zones chosen by the customer. Warn the user: AMR does not support zone pinning. When high availability is enabled, AMR is automatically **zone redundant** across all available zones in the region, but cannot be pinned to specific zones. If the user had zone pinning for co-locality with other resources (e.g., VMs in the same zone for lower latency), they should be aware this guarantee will not carry over to AMR.
+
 ### Step 2: Select Target AMR SKU
 1. Refer to the [SKU Mapping Guide](references/sku-mapping.md)
 2. Use metrics from Step 1 to validate sizing
