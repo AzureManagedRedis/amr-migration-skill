@@ -89,6 +89,8 @@ Always mention these when discussing migration — they require application chan
 
 If the user is using the automated migration with DNS switching, the old hostname continues to work, but the port change still applies.
 
+**Post-migration recommendation**: Suggest adopting [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/managed-redis/managed-redis-entra-for-access-control-configuration) as a replacement for access keys. Entra ID configurations are not migrated automatically and must be set up on the new AMR instance.
+
 ## Available Resources
 
 > **Important**: Always use the provided scripts for pricing lookups and metrics retrieval. Do not craft custom API calls or scripts — the provided ones already handle tier-specific calculation logic (HA, shards, MRPP) and metric aggregation correctly. For metrics, use a default time range of **7 days** unless the user specifies otherwise.

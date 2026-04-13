@@ -33,7 +33,7 @@ These exclusions are expected to be supported in future releases.
 
 **Artifacts NOT migrated** (manual action required after migration):
 - Cache data (not yet supported)
-- Entra ID configurations
+- Entra ID configurations — consider adopting [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/managed-redis/managed-redis-entra-for-access-control-configuration) post-migration as the recommended auth method
 - Auto-update schedules
 - Custom ACL definitions
 - Keyspace notifications
@@ -84,6 +84,8 @@ These exclusions are expected to be supported in future releases.
 ---
 
 ## Automated Migration Workflow
+
+> ⚠️ **Operational Impact**: Migration causes a brief connectivity blip similar to regular maintenance operations. Perform migrations during **off-business hours** to minimize user impact.
 
 The migration utility supports four actions: **Validate → Migrate → Status → Cancel (Rollback)**.
 
@@ -150,6 +152,14 @@ Cancel a failed or completed migration. Reverses DNS changes (~5+ minutes):
 ./scripts/azure-redis-migration-arm-rest-api-utility.sh --action Cancel --target "<targetAMRResourceId>"
 # Add --track to wait for completion
 ```
+
+### 5. Post-Migration
+
+After a successful migration with DNS switching:
+- The **source ACR cache continues to exist** and will incur charges. It is not automatically deleted.
+- Verify your application is working correctly against the new AMR instance — monitor for expected behavior, performance, and error rates.
+- Once validated, **delete the old ACR instance** to stop billing.
+- Consider switching to [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/managed-redis/managed-redis-entra-for-access-control-configuration) instead of access keys.
 
 ---
 
