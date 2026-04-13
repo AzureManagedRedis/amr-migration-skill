@@ -61,6 +61,7 @@ Check [Feature Comparison](feature-comparison.md) for features that change or ar
 - **Eviction policy**: Convert ACR `maxmemory-policy` to AMR `evictionPolicy` (PascalCase). Do not remove — it maps directly.
 - **Removed properties**: `redisVersion`, `replicasPerPrimary`, memory reservation configs, `staticIP`
 - **Scheduled patching**: ACR `patchSchedule` converts to AMR `maintenanceConfiguration.maintenanceWindows[]` (preview, API `2025-08-01-preview`). Map each day+hour entry to a weekly maintenance window with minimum 4h duration.
+- **Zone pinning**: If the source template has a `zones` array, warn the user that AMR does not support zone pinning — the `zones` property will be removed and AMR will automatically manage zone redundancy. If `zones` contains fewer than 3 entries (e.g., `["1"]` or `["1","2"]`), this is likely **intentional zone pinning** for co-locality with other resources (VMs, storage, etc.) — emphasize that this guarantee will not carry over to AMR. Even with 3 zones, note that the specific zone selection is not preserved; AMR chooses zones automatically.
 
 ## Step 6: ⛔ Customer Confirmation Gate
 
