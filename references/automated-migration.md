@@ -4,9 +4,9 @@ Azure offers an **automated migration path** from Azure Cache for Redis (ACR) to
 
 > **Important**: This feature is currently in **Public Preview**. Use the manual migration strategies for production workloads until GA, or if the cache falls outside the supported scope below.
 
-Two utility scripts wrap these APIs:
-- **PowerShell** (`scripts/Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1`) — uses Az PowerShell module (`Invoke-AzRestMethod`)
-- **Bash** (`scripts/azure-redis-migration-arm-rest-api-utility.sh`) — uses Azure CLI (`az rest`), works on Linux, macOS, and WSL
+Two utility scripts wrap these APIs — both use **Azure CLI** (`az rest`) as their only dependency:
+- **PowerShell** (`scripts/Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1`) — for Windows (PowerShell 7+)
+- **Bash** (`scripts/azure-redis-migration-arm-rest-api-utility.sh`) — for Linux, macOS, and WSL
 
 For detailed documentation on the underlying ARM API endpoints, request/response payloads, script architecture, behavioral differences, and troubleshooting, see [Migration Scripts Reference](migration-scripts.md).
 
@@ -46,11 +46,11 @@ These exclusions are expected to be supported in future releases.
 
 ### PowerShell (Windows)
 
-1. **Az PowerShell module** (v15.4.0+) — the script uses `Invoke-AzRestMethod` and `Get-AzContext`:
+1. **Azure CLI** (`az`) installed — see [Install the Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli):
    ```powershell
-   Install-Module -Name Az -AllowClobber -Scope CurrentUser
+   winget install -e --id Microsoft.AzureCLI
    ```
-2. **PowerShell 7 (x64)** recommended.
+2. **PowerShell 7 (x64)** required.
 3. **Unblock the script** (Windows only):
    ```powershell
    Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force -Scope CurrentUser
@@ -58,8 +58,8 @@ These exclusions are expected to be supported in future releases.
    ```
 4. **Login to Azure**:
    ```powershell
-   Connect-AzAccount
-   Set-AzContext -Subscription <subscriptionId>
+   az login
+   az account set --subscription <subscriptionId>
    ```
 
 ### Bash (Linux / macOS / WSL)
@@ -172,7 +172,7 @@ After a successful migration with DNS switching:
 | `-TargetResourceId` | `--target`, `-t` | Always | Full ARM resource ID of the target AMR cache (`Microsoft.Cache/redisEnterprise/<name>`) |
 | `-ForceMigrate $true` | `--force-migrate` | No | Bypass validation warnings (default: false) |
 | `-TrackMigration` | `--track` | No | Wait for long-running operation to complete (default: off) |
-| `-Environment` | — | No | Azure environment (default: `AzureCloud`). PowerShell only; bash uses whatever `az` is logged into |
+| — | — | — | Both scripts use whichever Azure cloud `az` is logged into |
 
 ---
 

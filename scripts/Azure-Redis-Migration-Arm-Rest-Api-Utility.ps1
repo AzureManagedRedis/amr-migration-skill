@@ -12,8 +12,6 @@
 .PARAMETER ForceMigrate
     If set to $true, migration proceeds even when source/target cache parity validation returns warnings.
     If set to $false (default), migration is blocked when validation returns any warning.
-.PARAMETER Environment
-    The Azure environment to use. Currently only "AzureCloud" (public cloud) is supported.
 .PARAMETER TrackMigration
     If set, the script will wait for the migration operation to complete (default is $false).
 .PARAMETER Help
@@ -30,7 +28,8 @@
     .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Cancel -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1"
     Cancels the migration.
 .NOTES
-    This script requires the Az PowerShell module.
+    This script requires Azure CLI (az) logged in. Run 'az login' before use.
+    PowerShell 7+ is required.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -51,10 +50,6 @@ param
     [bool] $ForceMigrate = $false,
 
     [Parameter()]
-    [ValidateSet("AzureCloud")]
-    [string] $Environment = "AzureCloud",
-
-    [Parameter()]
     [switch] $TrackMigration = $false,
 
     [Parameter()]
@@ -63,6 +58,7 @@ param
 
 # ARM API version as internal constant (not user-configurable)
 $ArmApiVersion = "2025-08-01-preview"
+$ArmBaseUrl = "https://management.azure.com"
 
 $ErrorActionPreference = "Stop"
 $currentScript = $MyInvocation.MyCommand.Source
@@ -89,82 +85,146 @@ if ($TargetResourceId -match $pattern) {
     throw "TargetResourceId is not parsed correctly."
 }
 
-function Login-ToAzure
+# Wrapper for Azure CLI calls — checks $LASTEXITCODE and throws on failure
+function Invoke-AzCli
 {
-    $context = Get-AzContext
-
-    if ($context -and $context.Environment.Name -eq $Environment)
-    {
-        if ($SubscriptionId -and $context.Subscription.Id -ne $SubscriptionId)
-        {
-            Set-AzContext -Subscription $SubscriptionId | Out-Null
-
-            $context = Get-AzContext
-            Write-Host "'$($context.Account.Id)' already logged in to Azure. Switched current subscription to '$($context.Subscription.Id)'"
-        }
-    }
-    else
-    {
-        Connect-AzAccount -EnvironmentName $Environment -Subscription $SubscriptionId -WarningAction SilentlyContinue | Out-Null
-
-        $context = Get-AzContext
-        Write-Host "Logged in to $($context.Environment.Name) as '$($context.Account.Id)' and selected subscription '$($context.Subscription.Id)'"
-    }
-
-    Write-Host
-    return $context
-}
-
-Login-ToAzure | Out-Null
-
-function Print-Response(
-    [Microsoft.Azure.Commands.Profile.Models.PSHttpResponse] $response = "$(throw 'Specify -response param')")
-{
-    # Check status code
-    $statusCode = $response.StatusCode
-    if ($statusCode -eq 200)
-    {
-        Write-Host "The request is successful." -ForegroundColor Green
-    }
-    elseif ($statusCode -gt 200 -and $statusCode -lt 300)
-    {
-        Write-Host "The request is accepted." -ForegroundColor Green
-    }
-    else
-    {
-        Write-Host "The request has encountered a failure. Status Code: $statusCode" -ForegroundColor Red
-    }
-
-    # Display relevant Azure headers if available
-    $headersToShow = @(
-        "x-ms-request-id",
-        "x-ms-correlation-request-id", 
-        "x-ms-operation-identifier"
+    param(
+        [Parameter(Mandatory)]
+        [string[]] $Arguments
     )
 
-    if ($response.Headers)
+    $output = & az @Arguments --only-show-errors 2>&1
+    if ($LASTEXITCODE -ne 0)
     {
-        foreach ($header in $response.Headers)
-        {
-            if ($headersToShow -contains $header.Key)
-            {
-                $headerValue = ($header.Value -join ", ")
-                Write-Host "$($header.Key) : $headerValue"
+        $errorMsg = ($output | Out-String).Trim()
+        throw "Azure CLI command failed (exit code $LASTEXITCODE): $errorMsg"
+    }
+    return ($output | Out-String).Trim()
+}
+
+function Confirm-AzureLogin
+{
+    try {
+        $accountJson = Invoke-AzCli -Arguments @("account", "show", "-o", "json")
+        $account = $accountJson | ConvertFrom-Json
+    } catch {
+        throw "Not logged in to Azure CLI. Run 'az login' first."
+    }
+
+    if ($account.id -ne $SubscriptionId)
+    {
+        Invoke-AzCli -Arguments @("account", "set", "--subscription", $SubscriptionId) | Out-Null
+        Write-Host "Switched Azure CLI subscription to '$SubscriptionId'."
+    }
+
+    Write-Host "Using subscription: $SubscriptionId"
+    Write-Host
+}
+
+Confirm-AzureLogin
+
+# Make an ARM REST call via az rest and return parsed JSON (or $null)
+function Invoke-ArmRest
+{
+    param(
+        [Parameter(Mandatory)]
+        [string] $Method,
+
+        [Parameter(Mandatory)]
+        [string] $Path,
+
+        [string] $Body
+    )
+
+    $url = "${ArmBaseUrl}${Path}?api-version=${ArmApiVersion}"
+    $args_ = @("rest", "--method", $Method, "--url", $url, "--headers", "Content-Type=application/json", "-o", "json")
+    $tempFile = $null
+
+    if ($Body)
+    {
+        # Write body to a temp file to avoid PowerShell argument quoting issues
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        $Body | Set-Content -Path $tempFile -Encoding utf8NoBOM
+        $args_ += @("--body", "@$tempFile")
+    }
+
+    try {
+        $output = Invoke-AzCli -Arguments $args_
+        Write-Host "The request is successful." -ForegroundColor Green
+
+        if ($output) {
+            try {
+                $parsed = $output | ConvertFrom-Json
+                $parsed | ConvertTo-Json -Depth 5 | Write-Host
+                return $parsed
+            } catch {
+                Write-Verbose "Raw response: $output"
+                Write-Host "(Response content available with -Verbose flag)"
+            }
+        }
+    } catch {
+        Write-Host "The request encountered a failure." -ForegroundColor Red
+        Write-Host $_.Exception.Message
+        throw
+    } finally {
+        if ($tempFile -and (Test-Path $tempFile)) {
+            Remove-Item $tempFile -Force
+        }
+    }
+
+    return $null
+}
+
+# Poll migration status until terminal state (used with -TrackMigration)
+function Wait-ForMigration
+{
+    $statusPath = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Cache/RedisEnterprise/$AmrCacheName/migrations/default"
+    $state = "InProgress"
+    $attempt = 0
+    $maxAttempts = 60  # 30 minutes max (30s intervals)
+    $transientErrors = 0
+    $maxTransientErrors = 5
+
+    Write-Host "Tracking operation progress (polling every 30s)..."
+    Write-Host
+
+    while ($state -notin @("Succeeded", "Failed", "Canceled") -and $attempt -lt $maxAttempts)
+    {
+        Start-Sleep -Seconds 30
+        $attempt++
+
+        try {
+            $url = "${ArmBaseUrl}${statusPath}?api-version=${ArmApiVersion}"
+            $output = Invoke-AzCli -Arguments @("rest", "--method", "GET", "--url", $url, "-o", "json")
+            $status = $output | ConvertFrom-Json
+            $state = $status.properties.provisioningState
+            $details = $status.properties.statusDetails
+            $transientErrors = 0
+
+            $line = "  Poll ${attempt}: state=${state}"
+            if ($details) { $line += " details=$details" }
+            Write-Host $line
+        } catch {
+            $transientErrors++
+            Write-Host "  Poll ${attempt}: transient error ($transientErrors/$maxTransientErrors) - $($_.Exception.Message)"
+            if ($transientErrors -ge $maxTransientErrors) {
+                Write-Host "Too many consecutive polling errors. Use -Action Status to check manually." -ForegroundColor Red
+                return
             }
         }
     }
 
-    # Display response content with limited detail to avoid leaking internal metadata
-    if ($response.Content) {
-        try {
-            $parsed = $response.Content | ConvertFrom-Json
-            $parsed | ConvertTo-Json -Depth 3 | Write-Host
-        } catch {
-            Write-Verbose "Raw response: $($response.Content)"
-            Write-Host "(Response content available with -Verbose flag)"
-        }
+    Write-Host
+    switch ($state)
+    {
+        "Succeeded" { Write-Host "Operation completed successfully." -ForegroundColor Green }
+        "Failed"    { Write-Host "Operation failed." -ForegroundColor Red }
+        "Canceled"  { Write-Host "Operation was canceled." }
+        default     { Write-Host "Timed out waiting for operation to complete (last state: $state)." -ForegroundColor Red }
     }
 }
+
+$migrationPath = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Cache/RedisEnterprise/$AmrCacheName/migrations/default"
 
 switch ($Action)
 {
@@ -186,33 +246,25 @@ switch ($Action)
         if ($TrackMigration.IsPresent)
         {
             Write-Host "This command will trigger the migration and will track the long running operation until its completion."
-            $response = Invoke-AzRestMethod `
-                -Method PUT `
-                -Path "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Cache/RedisEnterprise/$AmrCacheName/migrations/default?api-version=$ArmApiVersion" `
-                -Payload $payload `
-                -WaitForCompletion
         }
         else
         {
             Write-Host "This command will trigger the migration and will exit immediately. It will not track the long running migration operation until its completion. Please use the 'Status' action to check and track the migration completion status"
-            $response = Invoke-AzRestMethod `
-                -Method PUT `
-                -Path "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Cache/RedisEnterprise/$AmrCacheName/migrations/default?api-version=$ArmApiVersion" `
-                -Payload $payload
         }
 
-        Print-Response $response
+        Invoke-ArmRest -Method PUT -Path $migrationPath -Body $payload | Out-Null
+
+        if ($TrackMigration.IsPresent)
+        {
+            Wait-ForMigration
+        }
 
         break
     }
 
     "Status"
     {
-        $response = Invoke-AzRestMethod `
-            -Method GET `
-            -Path "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Cache/RedisEnterprise/$AmrCacheName/migrations/default?api-version=$ArmApiVersion"
-
-        Print-Response $response
+        Invoke-ArmRest -Method GET -Path $migrationPath | Out-Null
 
         break
     }
@@ -222,23 +274,22 @@ switch ($Action)
         if (-not $PSCmdlet.ShouldProcess("$TargetResourceId", "Cancel Redis migration")) {
             return
         }
+
         if ($TrackMigration.IsPresent)
         {
             Write-Host "This command will trigger the cancellation and will track the long running operation until its completion."
-            $response = Invoke-AzRestMethod `
-                -Method POST `
-                -Path "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Cache/RedisEnterprise/$AmrCacheName/migrations/default/cancel?api-version=$ArmApiVersion" `
-                -WaitForCompletion
         }
         else
         {
             Write-Host "This command will trigger the cancellation and will exit immediately. It will not track the long running operation until its completion. Use the 'Status' action to check and track migration cancellation status."
-            $response = Invoke-AzRestMethod `
-                -Method POST `
-                -Path "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Cache/RedisEnterprise/$AmrCacheName/migrations/default/cancel?api-version=$ArmApiVersion"
         }
 
-        Print-Response $response
+        Invoke-ArmRest -Method POST -Path "${migrationPath}/cancel" | Out-Null
+
+        if ($TrackMigration.IsPresent)
+        {
+            Wait-ForMigration
+        }
 
         break
     }
@@ -253,12 +304,7 @@ switch ($Action)
         } | ConvertTo-Json -Depth 3
 
         Write-Host "This command will validate whether a migration can be performed between the source and target caches."
-        $response = Invoke-AzRestMethod `
-            -Method POST `
-            -Path "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Cache/RedisEnterprise/$AmrCacheName/migrations/default/validate?api-version=$ArmApiVersion" `
-            -Payload $payload
-
-        Print-Response $response
+        Invoke-ArmRest -Method POST -Path "${migrationPath}/validate" -Body $payload | Out-Null
 
         break
     }

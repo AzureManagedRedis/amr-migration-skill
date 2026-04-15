@@ -64,10 +64,10 @@ When requested:
 
 ### Detecting Platform for Script Selection
 Check the user's OS to choose the right migration script variant:
-- **Windows / PowerShell**: Use `.ps1` scripts (requires Az PowerShell module)
+- **Windows / PowerShell**: Use `.ps1` scripts (requires Azure CLI)
 - **Linux / macOS / WSL / Bash**: Use `.sh` scripts (requires Azure CLI + jq)
 
-If the OS is unclear, prefer the bash scripts — Azure CLI (`az rest`) works cross-platform and avoids the Az PowerShell module authentication requirement.
+If the OS is unclear, prefer the bash scripts — they work cross-platform. Both script variants use Azure CLI (`az rest`) for ARM API calls.
 
 ### Constructing ARM Resource IDs
 Users will typically provide a cache name, resource group, and subscription. Construct the full ARM resource IDs as follows:
@@ -296,7 +296,7 @@ Azure offers an **automated migration path** from ACR to AMR via ARM REST APIs, 
 - Also available via the [Azure Portal](https://aka.ms/redis/portal/prod/migrate) behind a feature flag
 
 **Scripts:**
-- **PowerShell**: `scripts/Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1` (requires Az module)
+- **PowerShell**: `scripts/Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1` (requires Azure CLI)
 - **Bash**: `scripts/azure-redis-migration-arm-rest-api-utility.sh` (requires Azure CLI + jq)
 
 📖 For the full workflow, prerequisites, script parameters, and troubleshooting, read [Automated Migration Reference](references/automated-migration.md).

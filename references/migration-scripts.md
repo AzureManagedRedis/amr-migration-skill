@@ -4,17 +4,17 @@ This document describes the two migration utility scripts, the ARM REST API they
 
 ## Overview
 
-Both scripts wrap the **Azure Managed Redis migration ARM REST API** (`Microsoft.Cache/redisEnterprise/migrations`). They perform the same four operations — Validate, Migrate, Status, Cancel — but use different Azure authentication and HTTP stacks:
+Both scripts wrap the **Azure Managed Redis migration ARM REST API** (`Microsoft.Cache/redisEnterprise/migrations`). They perform the same four operations — Validate, Migrate, Status, Cancel — and both use Azure CLI (`az rest`) for authentication and HTTP calls:
 
 | | PowerShell (`.ps1`) | Bash (`.sh`) |
 |---|---|---|
 | **File** | `Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1` | `azure-redis-migration-arm-rest-api-utility.sh` |
-| **HTTP client** | `Invoke-AzRestMethod` (Az PowerShell module) | `az rest` (Azure CLI) |
-| **Auth** | `Get-AzContext` / `Connect-AzAccount` | `az account show` / `az login` |
-| **JSON handling** | `ConvertTo-Json` | `jq` |
-| **Track mode** | Native `-WaitForCompletion` (ARM LRO polling built into cmdlet) | Manual polling loop (30s intervals, 30min timeout) |
-| **Platform** | Windows (requires Az module) | Cross-platform (Linux, macOS, WSL, Windows with bash) |
-| **Sovereign clouds** | `-Environment` parameter (e.g., `AzureChinaCloud`) | Uses whichever cloud `az` is configured for |
+| **HTTP client** | `az rest` (Azure CLI) | `az rest` (Azure CLI) |
+| **Auth** | `az account show` / `az login` | `az account show` / `az login` |
+| **JSON handling** | `ConvertTo-Json` / `ConvertFrom-Json` | `jq` |
+| **Track mode** | Manual polling loop (30s intervals, 30min timeout) | Manual polling loop (30s intervals, 30min timeout) |
+| **Platform** | Windows (PowerShell 7+ required) | Cross-platform (Linux, macOS, WSL, Windows with bash) |
+| **Sovereign clouds** | Uses whichever cloud `az` is configured for | Uses whichever cloud `az` is configured for |
 
 ## ARM REST API Endpoints
 
@@ -90,14 +90,14 @@ No request body. Reverses the DNS switch and port forwarding. Takes ~5 minutes. 
 ### PowerShell Script Flow
 
 1. Parse `TargetResourceId` via regex → extract subscription, resource group, cache name
-2. Authenticate via `Get-AzContext` / `Connect-AzAccount` (Az PowerShell module)
-3. Switch subscription context if needed via `Set-AzContext`
+2. Verify Azure CLI login via `az account show`; fail with guidance if not logged in
+3. Switch subscription context if needed via `az account set`
 4. Build JSON payload with `ConvertTo-Json`
-5. Call `Invoke-AzRestMethod` with the appropriate HTTP method and path
-6. If `-TrackMigration` is set, uses the cmdlet's built-in `-WaitForCompletion` flag for ARM long-running operation (LRO) polling
-7. Print response status code, correlation headers, and content via `Print-Response`
+5. Call `az rest` with the appropriate HTTP method and URL via a wrapper function that checks `$LASTEXITCODE`
+6. If `-TrackMigration` is set, enters a polling loop: calls GET Status every 30 seconds until a terminal state (`Succeeded`, `Failed`, `Canceled`) or timeout (30 minutes). Transient polling errors are retried up to 5 times.
+7. Print response as pretty-printed JSON
 
-**Key dependency**: Requires the **Az PowerShell module** (`Invoke-AzRestMethod`, `Get-AzContext`). This is a separate authentication from the Azure CLI — users must run `Connect-AzAccount` even if `az login` has been done.
+**Key dependency**: Requires **Azure CLI** (`az`). Run `az login` before using the script. PowerShell 7+ is required.
 
 ### Bash Script Flow
 
@@ -116,12 +116,12 @@ No request body. Reverses the DNS switch and port forwarding. Takes ~5 minutes. 
 
 | Behavior | PowerShell | Bash |
 |----------|-----------|------|
-| **Tracking completion** | Uses ARM LRO polling built into `Invoke-AzRestMethod -WaitForCompletion` (efficient, event-driven) | Manual polling every 30 seconds via GET Status (simple, bounded at 30 min) |
+| **Tracking completion** | Manual polling every 30 seconds via GET Status (bounded at 30 min, retries transient errors) | Manual polling every 30 seconds via GET Status (bounded at 30 min) |
 | **Destructive action confirmation** | `SupportsShouldProcess` (`-WhatIf`/`-Confirm`) | Interactive prompt with `[y/N]`; skip with `--yes` |
-| **Error exit codes** | Throws PowerShell exceptions on failures (`$ErrorActionPreference = "Stop"`) | Returns non-zero exit codes; prints error to stderr |
-| **Response headers** | Displays `x-ms-request-id`, `x-ms-correlation-request-id`, `x-ms-operation-identifier` | Not displayed (limitation of `az rest` output) |
-| **JSON output** | Raw content string from `Invoke-AzRestMethod` response | Pretty-printed via `jq .` |
-| **Sovereign cloud** | Explicit `-Environment` parameter | Implicit — uses whatever cloud the CLI is configured for |
+| **Error exit codes** | Wrapper checks `$LASTEXITCODE` after each `az` call and throws on failure | Returns non-zero exit codes; prints error to stderr |
+| **Response headers** | Not displayed (limitation of `az rest` output; use Azure Portal Activity Log for correlation IDs) | Not displayed (same limitation) |
+| **JSON output** | Pretty-printed via `ConvertTo-Json` | Pretty-printed via `jq .` |
+| **Sovereign cloud** | Implicit — uses whatever cloud the CLI is configured for | Implicit — uses whatever cloud the CLI is configured for |
 
 ## Troubleshooting
 
@@ -130,8 +130,7 @@ No request body. Reverses the DNS switch and port forwarding. Takes ~5 minutes. 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `TargetResourceId is not parsed correctly` | Malformed resource ID or wrong provider path | Ensure the target uses `Microsoft.Cache/redisEnterprise/<name>` (not `Microsoft.Cache/Redis/<name>`) |
-| `Connect-AzAccount` / `Set-AzContext` fails (PS) | Az PowerShell not authenticated or wrong tenant | Run `Connect-AzAccount -TenantId <tenantId>` |
-| `Not logged in to Azure CLI` (Bash) | Azure CLI session expired | Run `az login` |
+| `Not logged in to Azure CLI` (PS or Bash) | Azure CLI session expired | Run `az login` |
 | 415 Unsupported Media Type | Missing `Content-Type: application/json` header | Already handled by both scripts; if seen with raw `az rest`, add `--headers "Content-Type=application/json"` |
 | 409 Conflict | Migration already in progress or target not in Running state | Check `Status` first; wait for any pending operations |
 | Source and target must be in the same region | Caches are in different Azure regions | Create the target AMR cache in the same region as the source ACR cache |
