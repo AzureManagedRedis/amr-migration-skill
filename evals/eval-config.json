@@ -28,8 +28,12 @@
       "A-series": ["A250", "A500", "A700", "A1000", "A1500", "A2000", "A4500"]
     },
     "retirement_dates": {
-      "basic_standard_premium": "September 30, 2028",
-      "enterprise_enterprise_flash": "March 31, 2027"
+      "basic_standard_premium": {
+        "creation_blocked_new_customers": "April 1, 2026",
+        "creation_blocked_existing_customers": "October 1, 2026",
+        "retirement": "September 30, 2028",
+        "instances_disabled": "October 1, 2028"
+      }
     },
     "metrics_eval_guidance": {
       "expected_metric_names": ["Used Memory RSS", "Server Load", "Connected Clients", "Cache Read", "Cache Write"],

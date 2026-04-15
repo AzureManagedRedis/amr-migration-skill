@@ -32,7 +32,7 @@ This skill does **not** cover Azure Cache for Redis Enterprise (ACRE) migrations
 
 ## ⚠️ AMR Terminology: No "Shards"
 
-Avoid using the term "shards" when describing AMR. In AMR, sharding is managed internally and not exposed to customers, so the concept doesn't apply and would be confusing. The term only applies to ACR Premium clustered caches. When discussing AMR, refer to the SKU name and its memory capacity instead.
+Avoid using the term "shards" when describing AMR. In AMR, sharding is managed internally and not exposed to customers, so the concept doesn't apply and would be confusing. The term only applies to ACR Premium clustered caches. When discussing AMR, refer to the performance tier (e.g., B10, M20) and its memory capacity instead.
 
 ---
 
@@ -152,10 +152,12 @@ See [Feature Comparison](references/feature-comparison.md) for detailed comparis
 See [Retirement FAQ](references/retirement-faq.md) for retirement dates, timelines, and common migration questions.
 
 **Relevant to this skill (ACR Basic/Standard/Premium)**:
-- **Basic/Standard/Premium**: Retire September 30, 2028
+- **April 1, 2026**: Creation blocked for new customers
+- **October 1, 2026**: Creation blocked for existing customers
+- **September 30, 2028**: Retirement date (instances disabled October 1, 2028)
 
 **Not covered by this skill**:
-- Enterprise/Enterprise Flash retirement (March 31, 2027) - contact Microsoft support
+- Enterprise/Enterprise Flash retirement (March 31, 2027) — contact Microsoft support
 
 ### Migration Overview
 See [Migration Overview](references/migration-overview.md) for detailed migration guidance including:

@@ -163,9 +163,10 @@ Scan the full `resources` array for these related resource types:
 | `Microsoft.Cache/redis/linkedServers` | Geo-replication links |
 | `Microsoft.Cache/redis/patchSchedules` | Scheduled patching windows. Convert to `maintenanceConfiguration.maintenanceWindows[]` on the AMR cluster resource (preview, API `2025-08-01-preview`). |
 | `Microsoft.Cache/redis/accessPolicyAssignments` | Entra ID access policy assignments (Data Owner, Data Contributor, etc.) |
+| `Microsoft.Cache/redis/accessPolicies` | Custom access policy definitions (beyond built-in Data Owner, Data Contributor, Data Reader). **Custom access policies are not yet supported in AMR** — flag for manual attention. |
 | `Microsoft.Network/privateEndpoints` with `"redisCache"` in `groupIds` | Existing private endpoint |
 
-For firewall rules, each resource has `properties.startIP` and `properties.endIP`. Note that firewall rules are **not available in AMR** — advise the user to use NSG rules on the Private Endpoint subnet instead. For private endpoints, check the `privateLinkServiceConnections[].groupIds` array for `"redisCache"`. For access policy assignments, extract the `properties.objectId`, `properties.objectIdAlias` (display name), and `properties.accessPolicyName` (e.g., `Data Owner`, `Data Contributor`).
+For firewall rules, each resource has `properties.startIP` and `properties.endIP`. Note that firewall rules are **not available in AMR** — advise the user to use NSG rules on the Private Endpoint subnet instead. For private endpoints, check the `privateLinkServiceConnections[].groupIds` array for `"redisCache"`. For access policy assignments, extract the `properties.objectId`, `properties.objectIdAlias` (display name), and `properties.accessPolicyName` (e.g., `Data Owner`, `Data Contributor`). For custom access policies (`accessPolicies`), extract the `properties.permissions` string — these have no AMR equivalent yet, so flag them in the gap report.
 
 ---
 
@@ -432,6 +433,7 @@ After extracting all properties, determine which features are active. This table
 | **Geo-replication** | Child resources of type `linkedServers` present | Convert to AMR active geo-replication (active-active model) |
 | **Managed identity** | `identity` block is present | Preserved in the AMR cluster resource |
 | **Access policy assignments** | Child resources of type `accessPolicyAssignments` present | Map ACR policies to AMR database-level access policy assignments (see transformation rules) |
+| **Custom access policies** | Child resources of type `accessPolicies` present (beyond built-in Data Owner, Data Contributor, Data Reader) | **Not yet supported in AMR** — flag for manual attention in the gap report |
 | **Non-SSL port** | `enableNonSslPort` = `true` | Convert to AMR `clientProtocol` setting. AMR supports a "Non-TLS access only" mode. |
 | **Scheduled patching** | `patchSchedule` child resource or property present | Convert to AMR `maintenanceConfiguration.maintenanceWindows[]` (preview). Map each ACR `dayOfWeek`+`startHourUtc` entry to an AMR maintenance window with `type: "Weekly"`, matching day, start hour, and a minimum 4-hour `duration`. Requires API `2025-08-01-preview`. |
 | **Availability zones** | `zones` array is present and non-empty | Do NOT include in AMR — zone redundancy is automatic |
@@ -475,6 +477,9 @@ Source Configuration
 ├── Tags: key-value map
 ├── Has Geo-Replication: true/false
 ├── Has MRPP: true/false (replicasPerPrimary > 1)
+├── Custom Access Policies: array of (if any non-built-in accessPolicies found)
+│   ├── Policy Name: string
+│   └── Permissions: string (e.g., "+@read +@write")
 └── Access Policy Assignments: array of
     ├── Object ID: Entra object ID (GUID)
     ├── Display Name: objectIdAlias (e.g., "Lorenzo Lodi Rizzini")

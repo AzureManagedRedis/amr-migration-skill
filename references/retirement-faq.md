@@ -8,20 +8,33 @@
 
 ## Key Retirement Dates
 
-| Tier | Retirement Date | Disabled From |
-|------|-----------------|---------------|
-| Basic, Standard, Premium | September 30, 2028 | October 1, 2028 |
-| Enterprise, Enterprise Flash | March 31, 2027 | April 1, 2027 |
+### Basic, Standard, Premium (OSS) — Full Timeline
+
+| Milestone | Date |
+|-----------|------|
+| Creation blocked for **new** customers | April 1, 2026 |
+| Creation blocked for **existing** customers | October 1, 2026 |
+| Retirement date | September 30, 2028 |
+| Instances disabled | October 1, 2028 |
+
+### Enterprise / Enterprise Flash (out of scope for this skill)
+
+| Milestone | Date |
+|-----------|------|
+| Creation blocked for all customers | April 1, 2026 |
+| Retirement date | March 31, 2027 |
+| Instances migrated to AMR | April 1, 2027 |
 
 ## Basic, Standard, and Premium Tiers
 
 ### What is retiring?
 All instances of Azure Cache for Redis (Basic, Standard, and Premium tiers) will be retired on **September 30, 2028**.
 
-### What happens to existing instances?
-- Instances remain available until September 30, 2028
-- Regular maintenance continues to keep instances secure and stable
-- Starting October 1, 2028, all remaining instances will be **disabled**
+### What happens before retirement?
+- **April 1, 2026**: New customers can no longer create Basic/Standard/Premium caches
+- **October 1, 2026**: Existing customers can no longer create new Basic/Standard/Premium caches
+- Existing instances remain available and receive regular maintenance until September 30, 2028
+- Starting **October 1, 2028**, all remaining instances will be **disabled**
 
 ### Why upgrade to Azure Managed Redis?
 - Greater performance and more cost-effective

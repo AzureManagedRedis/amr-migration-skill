@@ -24,6 +24,7 @@ These exclusions are expected to be supported in future releases.
 **Requirements**:
 - Source and target must be in the **same Azure region** (validation error if not)
 - Source and target must be in the **same subscription**
+- The source ACR cache must be in **Running** state (not creating, scaling, or failed)
 - The target AMR cache must be in **Running** state with at least one database
 
 **Artifacts migrated automatically**:
@@ -34,10 +35,9 @@ These exclusions are expected to be supported in future releases.
 **Artifacts NOT migrated** (manual action required after migration):
 - Cache data (not yet supported)
 - Entra ID configurations — consider adopting [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/managed-redis/managed-redis-entra-for-access-control-configuration) post-migration as the recommended auth method
-- Auto-update schedules
-- Custom ACL definitions
+- Maintenance schedules
 - Keyspace notifications
-- User-assigned managed identities
+- Managed identity for storage accounts (used for import/export, not for persistence — AMR manages persistence storage internally)
 - Data persistence configuration
 
 ---
