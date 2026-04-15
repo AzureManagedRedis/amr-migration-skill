@@ -32,7 +32,7 @@ This skill does **not** cover Azure Cache for Redis Enterprise (ACRE) migrations
 
 ## ⚠️ AMR Terminology: No "Shards"
 
-Avoid using the term "shards" when describing AMR. In AMR, sharding is managed internally and not exposed to customers, so the concept doesn't apply and would be confusing. The term only applies to ACR Premium clustered caches. When discussing AMR, refer to the performance tier (e.g., B10, M20) and its memory capacity instead.
+Avoid using the term "shards" when describing AMR. In AMR, sharding is managed internally and not exposed to customers, so the concept doesn't apply and would be confusing. The term only applies to ACR Premium clustered caches. When discussing AMR, refer to the performance tier (e.g., Balanced, Memory Optimized) and size (e.g., B10, M20) instead.
 
 ---
 
