@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Script for migrating a cache from Azure Cache for Redis to Azure Managed Redis using ARM REST APIs.
 .DESCRIPTION
