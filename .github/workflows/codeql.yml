@@ -1,0 +1,42 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run weekly to ensure continuous security scanning on default branch
+    # (requires running on default branch at least every 30 days)
+    - cron: '25 7 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['actions']
+        # CodeQL supports: cpp, csharp, go, java, javascript, python, ruby, swift, actions
+        # This repo has no standalone Python/JS source — only shell/PS scripts and GH Actions workflows.
+        # Shell scripts are covered by ShellCheck/PSScriptAnalyzer in static-analysis.yml.
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

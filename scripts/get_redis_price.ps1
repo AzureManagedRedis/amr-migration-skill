@@ -19,9 +19,11 @@
 
 param(
     [Parameter(Mandatory=$true)]
+    [ValidatePattern('^[a-zA-Z][a-zA-Z0-9]*$')]
     [string]$SKU,
 
     [Parameter(Mandatory=$true)]
+    [ValidatePattern('^[a-z0-9]+$')]
     [string]$Region,
 
     [Parameter(Mandatory=$false)]
@@ -32,14 +34,20 @@ param(
     [switch]$NoHA,
 
     [Parameter(Mandatory=$false)]
+    [ValidateRange(1, 30)]
     [int]$Shards = 1,
 
     [Parameter(Mandatory=$false)]
+    [ValidateRange(1, 3)]
     [int]$Replicas = 1,
 
     [Parameter(Mandatory=$false)]
+    [ValidatePattern('(?-i)^[A-Z]{3}$')]
     [string]$Currency = "USD"
 )
+
+# Enforce TLS 1.2+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Determine product type and meter name from SKU prefix
 $firstChar = $SKU.Substring(0, 1).ToUpper()
@@ -114,9 +122,13 @@ if ($product -eq "ACR" -and $Tier -eq "Premium") {
 Write-Host "Nodes:    $nodes"
 Write-Host ""
 
-# Build API URL
-$filter = "serviceName eq 'Redis Cache' and armRegionName eq '$Region' and type eq 'Consumption' and meterName eq '$meterName'"
-$url = "https://prices.azure.com/api/retail/prices?currencyCode=%27${Currency}%27&`$filter=$filter"
+# Build API URL (escape OData single quotes to prevent filter injection)
+$safeRegion = $Region -replace "'", "''"
+$safeMeterName = $meterName -replace "'", "''"
+$filter = "serviceName eq 'Redis Cache' and armRegionName eq '$safeRegion' and type eq 'Consumption' and meterName eq '$safeMeterName'"
+$encodedFilter = [System.Uri]::EscapeDataString($filter)
+$encodedCurrency = [System.Uri]::EscapeDataString("'${Currency}'")
+$url = "https://prices.azure.com/api/retail/prices?currencyCode=${encodedCurrency}&`$filter=${encodedFilter}"
 
 Write-Host "Querying pricing API..."
 Write-Host ""
@@ -131,12 +143,15 @@ try {
 
 if ($response.Items.Count -eq 0) {
     Write-Host "ERROR: No pricing found for '$meterName' in $Region" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Debug URL: $url"
+    Write-Verbose "Debug URL: $url"
     exit 1
 }
 
 $hourly = $response.Items[0].retailPrice
+if ($null -eq $hourly) {
+    Write-Host "ERROR: No retail price data in API response." -ForegroundColor Red
+    exit 1
+}
 $monthly = [math]::Round($hourly * 730 * $nodes, 2)
 
 Write-Host "------------------------------------------------------------"

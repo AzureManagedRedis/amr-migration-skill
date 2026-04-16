@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Get Azure Redis pricing with monthly cost calculation
 # Usage: ./get_redis_price.sh <SKU> <region> [tier] [options]
 #
@@ -110,6 +111,15 @@ while [ $# -gt 0 ]; do
     esac
 done
 
+# Input validation
+[[ "$SKU" =~ ^[a-zA-Z][a-zA-Z0-9]*$ ]] || { echo "ERROR: Invalid SKU format. Expected alphanumeric starting with a letter (e.g., M10, P2, C3)."; exit 1; }
+[[ "$REGION" =~ ^[a-z0-9]+$ ]] || { echo "ERROR: Invalid region format. Expected lowercase alphanumeric (e.g., westus2)."; exit 1; }
+[[ "$CURRENCY" =~ ^[A-Z]{3}$ ]] || { echo "ERROR: Invalid currency code. Expected 3 uppercase letters (e.g., USD, EUR)."; exit 1; }
+[[ "$SHARDS" =~ ^[0-9]+$ ]] || { echo "ERROR: --shards must be a positive integer."; exit 1; }
+[[ "$REPLICAS" =~ ^[0-9]+$ ]] || { echo "ERROR: --replicas must be a positive integer."; exit 1; }
+[[ "$SHARDS" -ge 1 && "$SHARDS" -le 30 ]] || { echo "ERROR: --shards must be between 1 and 30."; exit 1; }
+[[ "$REPLICAS" -ge 1 && "$REPLICAS" -le 3 ]] || { echo "ERROR: --replicas must be between 1 and 3."; exit 1; }
+
 # Determine product type and meter name from SKU prefix
 FIRST_CHAR="${SKU:0:1}"
 FIRST_CHAR_UPPER=$(echo "$FIRST_CHAR" | tr '[:lower:]' '[:upper:]')
@@ -184,15 +194,17 @@ fi
 echo "Nodes:    $NODES"
 echo ""
 
-# Build API URL
+# Build API URL (use python3 for proper URL encoding)
 FILTER="serviceName eq 'Redis Cache' and armRegionName eq '${REGION}' and type eq 'Consumption' and meterName eq '${METER_NAME}'"
-ENCODED_FILTER=$(echo "$FILTER" | sed "s/ /%20/g" | sed "s/'/%27/g")
-URL="https://prices.azure.com/api/retail/prices?currencyCode=%27${CURRENCY}%27&\$filter=${ENCODED_FILTER}"
+ENCODED_FILTER=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$FILTER")
+ENCODED_CURRENCY=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "'${CURRENCY}'")
+URL="https://prices.azure.com/api/retail/prices?currencyCode=${ENCODED_CURRENCY}&\$filter=${ENCODED_FILTER}"
 
 # Fetch price
 RESULT=$(curl -s "$URL")
 
 # Parse response and calculate monthly cost
+export NODES
 PRICING=$(echo "$RESULT" | python3 -c "
 import sys, json
 try:
@@ -203,8 +215,10 @@ except json.JSONDecodeError:
 items = data.get('Items', [])
 if not items:
     sys.exit(1)
+import os
+nodes = int(os.environ['NODES'])
 hourly = items[0]['retailPrice']
-monthly = round(hourly * 730 * $NODES, 2)
+monthly = round(hourly * 730 * nodes, 2)
 print(f'{hourly} {monthly}')
 ")
 

@@ -1,0 +1,88 @@
+name: Static Analysis
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/static-analysis.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/static-analysis.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: ShellCheck (Bash)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ShellCheck on bash scripts
+        run: |
+          echo "::group::ShellCheck version"
+          shellcheck --version
+          echo "::endgroup::"
+
+          failed=0
+          for script in scripts/*.sh; do
+            echo "::group::Checking $script"
+            if shellcheck --severity=warning --shell=bash "$script"; then
+              echo "✅ $script passed"
+            else
+              echo "❌ $script has issues"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ "$failed" -eq 1 ]; then
+            echo "::error::ShellCheck found issues in one or more scripts"
+            exit 1
+          fi
+          echo "All bash scripts passed ShellCheck ✅"
+
+  psscriptanalyzer:
+    name: PSScriptAnalyzer (PowerShell)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run PSScriptAnalyzer on PowerShell scripts
+        shell: pwsh
+        run: |
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+
+          $failed = $false
+          $scripts = Get-ChildItem -Path scripts -Filter *.ps1
+
+          foreach ($script in $scripts) {
+              Write-Host "::group::Checking $($script.Name)"
+              # Exclude stylistic rules that have pre-existing violations.
+              # Tighten over time by removing exclusions as the codebase is cleaned up.
+              $excludedRules = @(
+                  'PSAvoidUsingWriteHost'    # Scripts are CLI tools — Write-Host is intentional
+                  'PSUseApprovedVerbs'       # Internal helper functions (Login-ToAzure, Print-Response)
+                  'PSUseSingularNouns'       # Domain terms like Timeseries
+                  'PSReviewUnusedParameter'  # Pre-existing; re-enable after cleanup
+              )
+              $results = Invoke-ScriptAnalyzer -Path $script.FullName -Severity Warning,Error -ExcludeRule $excludedRules
+              if ($results) {
+                  $results | Format-Table -AutoSize
+                  Write-Host "❌ $($script.Name) has $($results.Count) issue(s)"
+                  $failed = $true
+              } else {
+                  Write-Host "✅ $($script.Name) passed"
+              }
+              Write-Host "::endgroup::"
+          }
+
+          if ($failed) {
+              Write-Host "::error::PSScriptAnalyzer found issues in one or more scripts"
+              exit 1
+          }
+          Write-Host "All PowerShell scripts passed PSScriptAnalyzer ✅"

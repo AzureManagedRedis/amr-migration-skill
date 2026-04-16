@@ -1,48 +1,95 @@
 ---
 name: amr-migration-skill
 description: |
-  Helps users migrate from Azure Cache for Redis (ACR) to Azure Managed Redis (AMR).
-  Use when users ask about: Redis migration, AMR vs ACR features, SKU selection, 
-  migration best practices, feature compatibility, Azure Redis cache upgrades,
-  or IaC template migration (ARM, Bicep, Terraform).
+  Helps users migrate from Azure Cache for Redis (ACR/OSS) Basic, Standard, and Premium tiers
+  to Azure Managed Redis (AMR). Provides SKU mapping, real-time pricing scripts, cache metrics
+  assessment, automated migration via ARM REST APIs with DNS switching, and IaC template
+  migration (ARM, Bicep, Terraform).
+  Use when users ask about: Redis migration, ACR to AMR, OSS to AMR, automated migration,
+  DNS switch migration, cache retirement deadline, ACR retirement date, SKU selection,
+  AMR vs ACR features, feature compatibility, Redis module support, pricing comparison,
+  cache upgrade, Basic/Standard/Premium tier migration, P1/P2/C3 cache migration,
+  AMR SKU recommendation, migration rollback, migration validation, connection string changes,
+  port changes, cache assessment and metrics, IaC template migration (ARM, Bicep, Terraform),
+  or checking for amr-migration-skill updates.
+  Do NOT use for: Enterprise (ACRE) tier migrations, creating new Redis caches, or general
+  Redis performance tuning.
 ---
 
 # Azure Managed Redis Migration Skill
 
-This skill assists users in migrating from Azure Cache for Redis (ACR) Basic/Standard/Premium tiers to Azure Managed Redis (AMR).
+This skill assists users in migrating from Azure Cache for Redis (ACR) Basic/Standard/Premium tiers to Azure Managed Redis (AMR), including automated migration via ARM REST APIs.
 
 ## 📝 Terminology Note
 
-Users may refer to Azure Cache for Redis by several names:
-- **OSS** (open-source Redis)
-- **ACR** (Azure Cache for Redis)
-- **Basic**, **Standard**, or **Premium** tier
-
-These all refer to the same product: **Azure Cache for Redis**. Treat these terms interchangeably when users ask about migration.
+Users may refer to Azure Cache for Redis by several names: **OSS**, **ACR**, or by tier name (**Basic**, **Standard**, **Premium**). These all refer to the same product. Treat these terms interchangeably when users ask about migration.
 
 ## ⚠️ Scope Limitation: Enterprise Tier NOT Supported
 
-**This skill does NOT cover Azure Cache for Redis Enterprise (ACRE) migrations.**
-
-If users ask about migrating from:
-- Azure Cache for Redis **Enterprise** tier
-- Azure Cache for Redis **Enterprise Flash** tier
-
-Respond with:
-> "This skill only covers migrations from Azure Cache for Redis (Basic, Standard, and Premium tiers) to Azure Managed Redis. Please consult Microsoft support or the official documentation for Enterprise tier migration guidance."
+This skill does **not** cover Azure Cache for Redis Enterprise (ACRE) migrations. If users ask about migrating from Enterprise or Enterprise Flash tiers, explain that those have different migration paths and suggest contacting Microsoft support or consulting the official documentation.
 
 **Supported source tiers**: Basic (C0-C6), Standard (C0-C6), Premium (P1-P5)
-**Not supported**: Enterprise, Enterprise Flash
 
 ## ⚠️ AMR Terminology: No "Shards"
 
-**Do not use the term "shards" when describing AMR (Azure Managed Redis).** In AMR, sharding is managed internally and not exposed to the customer. The concept of shards only applies to ACR Premium clustered caches. When discussing AMR, refer to the SKU and its memory capacity instead.
+Avoid using the term "shards" when describing AMR. In AMR, sharding is managed internally and not exposed to customers, so the concept doesn't apply and would be confusing. The term only applies to ACR Premium clustered caches. When discussing AMR, refer to the performance tier (e.g., Balanced, Memory Optimized) and size (e.g., B10, M20) instead.
 
 ---
 
-## When to Use This Skill
+## Agent Guidance
 
-Activate when the user asks about ACR → AMR migration, SKU selection, feature comparison, or IaC template conversion (Bicep/ARM/Terraform). See **Workflow Selection** below to determine which workflow to follow.
+### ⛔ Destructive Operation Confirmation (Mandatory)
+Before executing **Migrate** or **Cancel** actions via the migration scripts, the agent **must**:
+1. Display the **full source and target resource IDs** to the user
+2. Clearly state the action being performed (e.g., "This will initiate a DNS switch migration from ACR to AMR")
+3. **Ask for explicit user confirmation** using the `ask_user` tool before running the script
+4. Never auto-confirm or assume consent for these operations
+
+This applies regardless of how the user phrased their request. Even if the user says "go ahead and migrate", the agent must confirm the specific resource IDs before executing.
+
+For the bash script, always pass `--yes` when the agent runs it (since the agent cannot interact with the terminal prompt), but only after obtaining user confirmation through the `ask_user` tool first.
+
+### 🔍 Validate-Before-Migrate (Mandatory)
+Before executing **Migrate**, the agent **must** first run **Validate** with the same source and target resource IDs and present the results to the user. Do not proceed to Migrate if validation returns errors. If validation returns warnings, explain them and ask the user whether to proceed with `-ForceMigrate $true` (PowerShell) or `--force-migrate` (bash).
+
+### Version Check (manual only — triggered by user request)
+Do **not** check for updates automatically. Only perform a version check when the user explicitly asks (e.g., "check for updates for the amr skill", "is there a newer version of amr-migration-skill?").
+
+When requested:
+1. Read the local `VERSION` file in this skill's root directory.
+2. Fetch the remote version from: `https://raw.githubusercontent.com/AzureManagedRedis/amr-migration-skill/main/VERSION`
+3. If the remote version is newer, tell the user: _"A newer version of the AMR Migration Skill is available (local: X, latest: Y). Update from: https://github.com/AzureManagedRedis/amr-migration-skill"_
+4. If versions match, tell the user: _"You're on the latest version (X)."_
+5. If the fetch fails, tell the user the check failed and suggest trying again later.
+
+### Detecting Platform for Script Selection
+Check the user's OS to choose the right migration script variant:
+- **Windows / PowerShell**: Use `.ps1` scripts (requires Azure CLI)
+- **Linux / macOS / WSL / Bash**: Use `.sh` scripts (requires Azure CLI + jq)
+
+If the OS is unclear, prefer the bash scripts — they work cross-platform. Both script variants use Azure CLI (`az rest`) for ARM API calls.
+
+### Constructing ARM Resource IDs
+Users will typically provide a cache name, resource group, and subscription. Construct the full ARM resource IDs as follows:
+
+- **ACR source**: `/subscriptions/<subId>/resourceGroups/<rg>/providers/Microsoft.Cache/Redis/<cacheName>`
+- **AMR target**: `/subscriptions/<subId>/resourceGroups/<rg>/providers/Microsoft.Cache/redisEnterprise/<cacheName>`
+
+If the user only provides a cache name, use `az redis show -n <name> -g <rg> --query id -o tsv` to retrieve the full resource ID. If the subscription or RG is also unknown, use `az redis list --query "[?name=='<name>'].{id:id, rg:resourceGroup}" -o table` to find it.
+
+### Validating SKU Recommendations
+Before recommending an AMR SKU to the user, cross-check it against the valid SKU list in [AMR SKU Specs](references/amr-sku-specs.md). Never recommend a SKU that doesn't appear in that file. If the ideal capacity falls between two SKU sizes, recommend the next size up.
+
+### Connection Changes Reminder
+Always mention these when discussing migration — they require application changes:
+- **TLS port**: ACR uses **6380** → AMR uses **10000**
+- **Non-TLS**: ACR 6379 → not supported on AMR
+- **DNS suffix**: `.redis.cache.windows.net` → `<region>.redis.azure.net`
+- **Redis version**: 6 → 7.4
+
+If the user is using the automated migration with DNS switching, the old hostname continues to work, but the port change still applies.
+
+**Post-migration recommendation**: Suggest adopting [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/managed-redis/managed-redis-entra-for-access-control-configuration) as a replacement for access keys. Entra ID configurations are not migrated automatically and must be set up on the new AMR instance.
 
 ## Available Resources
 
@@ -105,10 +152,12 @@ See [Feature Comparison](references/feature-comparison.md) for detailed comparis
 See [Retirement FAQ](references/retirement-faq.md) for retirement dates, timelines, and common migration questions.
 
 **Relevant to this skill (ACR Basic/Standard/Premium)**:
-- **Basic/Standard/Premium**: Retire September 30, 2028
+- **April 1, 2026**: Creation blocked for new customers
+- **October 1, 2026**: Creation blocked for existing customers
+- **September 30, 2028**: Retirement date (instances disabled October 1, 2028)
 
 **Not covered by this skill**:
-- Enterprise/Enterprise Flash retirement (March 31, 2027) - contact Microsoft support
+- Enterprise/Enterprise Flash retirement (March 31, 2027) — contact Microsoft support
 
 ### Migration Overview
 See [Migration Overview](references/migration-overview.md) for detailed migration guidance including:
@@ -133,7 +182,7 @@ For converting ACR templates (ARM, Bicep, Terraform) to AMR format, use these re
 | User Intent | Signal Phrases | Workflow |
 |---|---|---|
 | Move a live cache to AMR | "migrate cache", "move to AMR", "select SKU", "assess metrics", "migration strategy", "switch traffic" | **Migration Workflow** (Steps 1-4) |
-| Convert IaC templates to AMR format | "convert template", "Bicep migration", "ARM to AMR", "Terraform", "IaC", "template transformation", "region buildout" | **IaC Migration Workflow** (Steps 1-7) |
+| Convert IaC templates to AMR format | "convert template", "Bicep migration", "ARM to AMR", "Terraform", "IaC", "template transformation", "region buildout" | **IaC Migration Workflow** (Steps 1-8) |
 | Compare features or answer general questions | "compare ACR vs AMR", "feature compatibility", "retirement date", "best practices" | Answer directly using reference docs — no workflow needed |
 
 ### Ambiguous Requests
@@ -184,11 +233,22 @@ Both values are in MB. **Actual Usable = SKU Capacity − (maxmemoryReserved + m
 - Connected Clients
 - Network Bandwidth — Cache Read and Cache Write (bytes/sec)
 
+> **Clustered caches**: For Premium caches with multiple shards, the scripts automatically detect the shard count and aggregate metrics across all shards. Memory and bandwidth are **summed** (total capacity), while Server Load and Connected Clients report the **max per shard** (bottleneck value). The output header indicates when shard aggregation is active.
+
 Use these values to:
 1. Size the target AMR SKU (usable memory ≥ peak used memory — no extra buffer needed with an eviction policy)
 2. Choose tier (high Server Load + low memory → Compute Optimized X-series)
 3. Verify connection limits are sufficient
 4. Use P95 values to distinguish sustained load from occasional spikes
+
+**Zone pinning check**: Also check if the source cache uses zone pinning:
+
+```bash
+az redis show -n <cache-name> -g <resource-group> -o json \
+  --query "{zones: zones, zonalAllocationPolicy: properties.zonalAllocationPolicy}"
+```
+
+If `zones` is set and `zonalAllocationPolicy` is `UserDefined`, the cache is **zone-pinned** — deployed to specific availability zones chosen by the customer. Warn the user: AMR does not support zone pinning. When high availability is enabled, AMR is automatically **zone redundant** across all available zones in the region, but cannot be pinned to specific zones. If the user had zone pinning for co-locality with other resources (e.g., VMs in the same zone for lower latency), they should be aware this guarantee will not carry over to AMR.
 
 ### Step 2: Select Target AMR SKU
 1. Refer to the [SKU Mapping Guide](references/sku-mapping.md)
@@ -216,9 +276,32 @@ Use these values to:
 
 ## IaC Migration Workflow
 
-> For the full 7-step workflow, see [IaC Migration Workflow](references/iac-migration-workflow.md).
+> For the full 8-step workflow, see [IaC Migration Workflow](references/iac-migration-workflow.md).
 
 Converts ACR templates (ARM JSON, Bicep, Terraform) to AMR format using AI-driven transformation with reference docs for grounding. Includes SKU mapping, pricing comparison, feature gap analysis, customer confirmation gate, and template generation. Scripts are only used for pricing lookups.
+
+---
+
+## Automated Migration (ARM REST API)
+
+Azure offers an **automated migration path** from ACR to AMR via ARM REST APIs, handling DNS switching automatically so clients using the old OSS endpoint continue to work after migration.
+
+> **Important**: This feature is currently in **Public Preview**. Use the manual migration strategies (Steps 1–4 above) for production workloads until GA.
+
+**Key facts:**
+- Supported: All Basic/Standard/Premium SKUs — **except** Private Link, VNet injected, or Geo-Replicated caches
+- Source and target must be in the **same region and subscription**
+- Migrates: access keys, OSS host endpoint (DNS switch), OSS port. Does **not** migrate cache data, Entra ID, persistence config, or managed identities
+- Workflow: **Validate → Migrate → Status → Cancel (Rollback)**
+- Also available via the [Azure Portal](https://aka.ms/redis/portal/prod/migrate) behind a feature flag
+
+**Scripts:**
+- **PowerShell**: `scripts/Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1` (requires Azure CLI)
+- **Bash**: `scripts/azure-redis-migration-arm-rest-api-utility.sh` (requires Azure CLI + jq)
+
+📖 For the full workflow, prerequisites, script parameters, and troubleshooting, read [Automated Migration Reference](references/automated-migration.md).
+For ARM API internals, see [Migration Scripts Reference](references/migration-scripts.md).
+For validation error codes, see [Validation Errors & Warnings](references/migration-validation.md).
 
 ## Common Questions
 

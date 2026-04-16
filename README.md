@@ -72,8 +72,29 @@ You should see `Source: Personal` and the location pointing to `~/.copilot/skill
 
 ### With Claude Code
 
+Clone the repo and copy the skill into Claude Code's skills directory:
+
+```bash
+git clone https://github.com/AzureManagedRedis/amr-migration-skill
 ```
-# Add to your agent skills directory
+
+**Personal (global) skill** — available in all projects:
+
+```bash
+mkdir -p ~/.claude/skills/amr-migration-skill
+cp -r ./amr-migration-skill/* ~/.claude/skills/amr-migration-skill/
+```
+
+**Project-scoped skill** — available only in a specific repo:
+
+```bash
+mkdir -p .claude/skills/amr-migration-skill
+cp -r ./amr-migration-skill/* .claude/skills/amr-migration-skill/
+```
+
+Restart Claude Code, then verify the skill is loaded by asking:
+```
+Is the amr-migration-skill loaded?
 ```
 
 ## Example Prompts
@@ -83,6 +104,13 @@ Try these prompts to get started:
 ### Migration Planning
 - **"I have an Azure Cache for Redis Standard C3 in westus2. Help me migrate to Azure Managed Redis."**
 - **"We're running a Premium P2 cache with 3 shards and geo-replication. What's the best AMR SKU and migration strategy?"**
+
+### Automated Migration (ARM REST API)
+- **"Validate whether my ACR cache can be migrated to AMR automatically using the migration script."**
+- **"Run the automated migration from my ACR cache `my-cache` to my AMR cache `my-amr-cache` with DNS switching."**
+- **"Check the status of my ongoing AMR migration."**
+- **"Cancel / rollback my AMR migration."**
+- **"I'm getting a validation warning about clustering policy mismatch. Should I force the migration?"**
 
 ### SKU Selection & Pricing
 - **"Compare AMR SKU options for a workload currently using 10GB of memory with high server load."**
@@ -115,24 +143,32 @@ Try these prompts to get started:
 amr-migration-skill/
 ├── SKILL.md              # Main skill definition and instructions
 ├── README.md             # This file
+├── VERSION               # Skill version (used by manual update check)
 ├── TODO.md               # Roadmap items
-├── .gitignore
+├── evals/
+│   ├── evals.json            # Test cases with prompts and assertions
+│   └── eval-config.json      # Run modes (quick/standard/full) and grader context
 ├── references/
+│   ├── amr-sku-specs.md              # AMR SKU definitions (M, B, X, Flash series)
+│   ├── automated-migration.md        # Full automated migration workflow & prerequisites
 │   ├── azure-cli-commands.md         # Azure CLI reference for ACR discovery
 │   ├── feature-comparison.md         # ACR vs AMR feature matrix
 │   ├── iac-acr-template-parsing.md   # How to parse ACR IaC templates
 │   ├── iac-amr-template-structure.md # AMR template transformation rules
 │   ├── mcp-server-config.md          # MCP server setup for live documentation
 │   ├── migration-overview.md         # Migration strategies and guidance
+│   ├── migration-scripts.md          # Automated migration ARM API deep-dive
+│   ├── migration-validation.md       # Validation errors & warnings reference
 │   ├── pricing-tiers.md              # Pricing calculation rules
 │   ├── retirement-faq.md             # ACR retirement dates and FAQ
 │   ├── sku-mapping.md                # SKU selection guidelines & decision matrix
-│   ├── amr-sku-specs.md              # AMR SKU definitions (M, B, X, Flash series)
 │   └── examples/iac/                 # Before/after template pairs
 │       ├── arm/                      # ARM JSON (inline values) — 6 scenarios
 │       ├── arm-parameterized/        # ARM JSON with parameter files — 4 scenarios
 │       └── bicep/                    # Bicep format — 2 scenarios
 └── scripts/
+    ├── Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1  # Automated migration via ARM REST API (PowerShell)
+    ├── azure-redis-migration-arm-rest-api-utility.sh    # Automated migration via ARM REST API (Bash)
     ├── get_acr_metrics.ps1      # Pull ACR metrics for SKU sizing
     ├── get_acr_metrics.sh
     ├── get_redis_price.ps1      # Pricing with HA/shards/MRPP logic
@@ -141,12 +177,33 @@ amr-migration-skill/
 
 > **Note**: IaC template conversion is AI-driven — the agent reads the reference docs and example templates to generate migrated output directly. Scripts are only used for pricing lookups and metrics retrieval. For CI/CD pipeline automation (batch conversion without an AI agent), a standalone PowerShell tool will be available in a separate repository.
 
+## Evaluation & Benchmarking
+
+The skill includes test cases in `evals/` to measure quality. Three run modes are defined in `eval-config.json`:
+
+| Mode | Models | Runs | Without-Skill Baseline | Use When |
+|------|--------|------|----------------------|----------|
+| **quick** | Sonnet | 1× | Skipped | Iterating on skill content |
+| **standard** | Sonnet + Haiku | 1× | Included | Before opening a PR |
+| **full** | Opus + Sonnet + Haiku + GPT-5-mini | 2× | Included | Before merging |
+
+To run evals, ask Copilot CLI:
+```
+Run the amr-migration-skill evals in quick mode
+```
+
+The `grader_context` in `eval-config.json` includes domain facts (valid SKU names, retirement dates) so the grader doesn't hallucinate during evaluation.
+
 ## External Resources
 
 This skill leverages:
 - **Microsoft Learn MCP Server**: `https://learn.microsoft.com/api/mcp` for up-to-date Azure documentation
-- **SKU Mapping Data**: Internal spreadsheet (requires updates to `references/sku-mapping.md`)
+- **SKU Mapping Data**: `references/sku-mapping.md`
 - **Azure CLI Reference**: `references/azure-cli-commands.md`
+
+## Feedback & Issues
+
+We welcome your feedback! If you have suggestions, feature requests, or run into any problems, please [open an issue](https://github.com/AzureManagedRedis/amr-migration-skill/issues) on GitHub. Whether it's a bug report, an idea for improvement, or a question about usage — we'd love to hear from you.
 
 ## Contributing
 
