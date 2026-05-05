@@ -63,6 +63,19 @@ $ArmBaseUrl = "https://management.azure.com"
 $ErrorActionPreference = "Stop"
 $currentScript = $MyInvocation.MyCommand.Source
 
+# Identify calls originating from this skill in ARM/server-side logs.
+# Azure CLI appends AZURE_HTTP_USER_AGENT to its default User-Agent on every
+# request made via 'az rest', so ARM activity logs / Geneva will record it.
+$ScriptDir = Split-Path -Parent $currentScript
+$VersionFile = Join-Path $ScriptDir '..' 'VERSION'
+$SkillVersion = if (Test-Path $VersionFile) { (Get-Content -Raw $VersionFile).Trim() } else { 'unknown' }
+$SkillUserAgent = "amr-migration-skill/$SkillVersion (action=arm-migration)"
+if ([string]::IsNullOrWhiteSpace($env:AZURE_HTTP_USER_AGENT)) {
+    $env:AZURE_HTTP_USER_AGENT = $SkillUserAgent
+} elseif ($env:AZURE_HTTP_USER_AGENT -notlike "*amr-migration-skill/*") {
+    $env:AZURE_HTTP_USER_AGENT = "$($env:AZURE_HTTP_USER_AGENT) $SkillUserAgent"
+}
+
 function Show-Help
 {
     Get-Help -Name $currentScript -Full

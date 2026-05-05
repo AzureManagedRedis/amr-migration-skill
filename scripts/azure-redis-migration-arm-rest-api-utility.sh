@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+# Identify calls originating from this skill in ARM/server-side logs.
+# Azure CLI appends AZURE_HTTP_USER_AGENT to its default User-Agent on every
+# request made via 'az rest', so ARM activity logs / Geneva will record it.
+__amr_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${__amr_script_dir}/../VERSION" ]]; then
+    __amr_skill_version="$(tr -d '[:space:]' < "${__amr_script_dir}/../VERSION")"
+else
+    __amr_skill_version="unknown"
+fi
+__amr_skill_ua="amr-migration-skill/${__amr_skill_version} (action=arm-migration)"
+if [[ -z "${AZURE_HTTP_USER_AGENT:-}" ]]; then
+    export AZURE_HTTP_USER_AGENT="${__amr_skill_ua}"
+elif [[ "${AZURE_HTTP_USER_AGENT}" != *"amr-migration-skill/"* ]]; then
+    export AZURE_HTTP_USER_AGENT="${AZURE_HTTP_USER_AGENT} ${__amr_skill_ua}"
+fi
+
 #
 # Script for migrating a cache from Azure Cache for Redis to Azure Managed Redis using ARM REST APIs.
 #
