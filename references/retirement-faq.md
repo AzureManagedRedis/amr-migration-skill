@@ -2,7 +2,7 @@
 
 > **Source**: https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/retirement-faq
 > 
-> **Last Updated**: February 2026 - Check source URL for the latest information.
+> **Last Updated**: May 2026 - Check source URL for the latest information.
 
 > **Scope Note**: This skill focuses on Basic/Standard/Premium migrations. Enterprise tier details below are provided for retirement awareness only.
 
@@ -16,6 +16,7 @@
 | Creation blocked for **existing** customers | October 1, 2026 |
 | Retirement date | September 30, 2028 |
 | Instances disabled | October 1, 2028 |
+
 
 ### Enterprise / Enterprise Flash (out of scope for this skill)
 

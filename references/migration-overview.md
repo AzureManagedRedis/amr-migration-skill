@@ -2,7 +2,7 @@
 
 > **Source**: https://learn.microsoft.com/en-us/azure/redis/migrate/migrate-overview
 > 
-> **Last Updated**: February 2026 - Check source URL for the latest information.
+> **Last Updated**: May 2026 - Check source URL for the latest information.
 
 ## Overview
 
@@ -28,9 +28,11 @@ Key migration highlights:
 |---------|----------------------|---------------------|
 | DNS suffix | `.redis.cache.windows.net` | `<region>.redis.azure.net` |
 | TLS port | 6380 | **10000** |
-| Non-TLS port | 6379 | Not supported |
+| Non-TLS port | 6379 | 10000 (Plaintext mode) |
 | Node TLS ports | 13XXX | 85XX |
 | Redis version | 6 | 7.4 |
+
+> **Note**: AMR uses port 10000 for either TLS or Plaintext. The `clientProtocol` mode is set at cache creation, and only one mode is active at a time.
 
 ---
 
@@ -38,7 +40,7 @@ Key migration highlights:
 
 For detailed SKU mapping tables (Basic/Standard, Premium non-clustered, and Premium clustered with per-shard-count mappings), see the [SKU Mapping Guide](sku-mapping.md).
 
-> **Important — Clustering Policy**: Non-clustered ACR caches (Basic, Standard, and non-clustered Premium) should be migrated to AMR with **Enterprise clustering policy** enabled. AMR uses clustering internally for all SKUs, and the default OSS clustering policy exposes cluster topology to the client, which may require application code changes (e.g., switching to a cluster-aware Redis client). Enterprise clustering policy hides this from the application, preserving the single-endpoint behavior these caches had on ACR.
+> **Important — Clustering Policy**: Clustering policy selection is context-dependent. For non-clustered ACR caches (Basic, Standard, and non-clustered Premium) with target AMR SKU ≤ 24GB, use **NoCluster** to preserve the single-endpoint behavior these caches had on ACR, avoid cross-slot errors, and keep the option to upgrade to clustered later without recreating the database. For non-clustered source caches with target AMR SKU > 24GB, use **Enterprise clustering policy** because larger AMR caches require clustering, and Enterprise clustering hides cluster topology from the application so clients do not need to be cluster-aware. For clustered source caches (Premium with `shardCount` ≥ 1), use **OSS clustering** — the client is already cluster-aware, and OSS clustering offers better performance.
 
 > **Important — Network Isolation**: AMR does not support VNet injection. ACR Premium caches using VNet injection should be migrated to AMR with **Private Link** (Private Endpoints) for network isolation.
 

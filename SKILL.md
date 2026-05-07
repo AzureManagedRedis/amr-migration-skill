@@ -83,13 +83,13 @@ Before recommending an AMR SKU to the user, cross-check it against the valid SKU
 ### Connection Changes Reminder
 Always mention these when discussing migration — they require application changes:
 - **TLS port**: ACR uses **6380** → AMR uses **10000**
-- **Non-TLS**: ACR 6379 → not supported on AMR
+- **Non-TLS**: ACR 6379 → AMR uses **10000** (Plaintext mode, set at creation; only one mode active at a time)
 - **DNS suffix**: `.redis.cache.windows.net` → `<region>.redis.azure.net`
 - **Redis version**: 6 → 7.4
 
 If the user is using the automated migration with DNS switching, the old hostname continues to work, but the port change still applies.
 
-**Post-migration recommendation**: Suggest adopting [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/managed-redis/managed-redis-entra-for-access-control-configuration) as a replacement for access keys. Entra ID configurations are not migrated automatically and must be set up on the new AMR instance.
+**Post-migration recommendation**: Suggest adopting [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/entra-for-authentication) as a replacement for access keys. Entra ID configurations are not migrated automatically and must be set up on the new AMR instance.
 
 ## Available Resources
 
@@ -103,9 +103,10 @@ Use the Microsoft Learn MCP server to fetch up-to-date documentation:
 - **MCP Endpoint**: `https://learn.microsoft.com/api/mcp`
 - **Setup Guide**: See [MCP Server Configuration](references/mcp-server-config.md) for setup instructions (GitHub Copilot, Claude Desktop)
 - Key documentation paths:
-  - `/azure/azure-cache-for-redis/` - General Azure Redis documentation
-  - `/azure/azure-cache-for-redis/managed-redis/` - AMR-specific documentation
-  - `/azure/azure-cache-for-redis/cache-overview` - Product overview
+  - `/azure/redis/` - Azure Managed Redis documentation hub
+  - `/azure/redis/overview` - Consolidated AMR overview, key scenarios, and tier selection starting point
+  - `/azure/redis/architecture` - AMR architecture, clustering model, and policy guidance
+  - `/azure/redis/migrate/migrate-overview` - Migration hub organized into Understand differences, Explore options, and Plan execution
 
 ### Azure CLI Command Reference
 See [Azure CLI Commands](references/azure-cli-commands.md) for practical `az redis` examples to:
@@ -261,7 +262,7 @@ If `zones` is set and `zonalAllocationPolicy` is `UserDefined`, the cache is **z
 
 ### Step 3: Plan Migration
 1. Determine migration strategy (dual-write, snapshot/restore, etc.)
-2. **Clustering policy**: For non-clustered ACR caches (Basic, Standard, non-clustered Premium), create the AMR cache with **Enterprise clustering policy** to avoid client application changes. OSS clustering policy exposes cluster topology and may require a cluster-aware client.
+2. **Clustering policy**: Use a context-dependent policy based on the source cache and target AMR size. For non-clustered ACR caches (Basic, Standard, non-clustered Premium) with target AMR SKU ≤ 24GB, use **NoCluster** to preserve single-endpoint behavior, avoid cross-slot errors, and retain the option to upgrade to clustered later without recreating the database. For non-clustered source caches with target AMR SKU > 24GB, use **Enterprise clustering policy** because larger AMR caches require clustering, and Enterprise clustering hides cluster topology from clients that are not cluster-aware. For clustered source caches (Premium with `shardCount` ≥ 1), use **OSS clustering** — the client is already cluster-aware, and OSS clustering offers better performance.
 3. **Network isolation**: ACR caches using VNet injection must be replaced with **Private Link** on AMR, as AMR does not support VNet injection. Ensure Private Endpoints are configured before cutover.
 4. Plan for potential downtime or data sync requirements
 5. Update application connection strings and configuration
