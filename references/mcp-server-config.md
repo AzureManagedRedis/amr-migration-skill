@@ -43,26 +43,23 @@ Add to your `claude_desktop_config.json`:
 
 When using the MCP server, these paths provide relevant Azure Redis documentation:
 
-### Azure Cache for Redis
-- `/azure/azure-cache-for-redis/cache-overview`
-- `/azure/azure-cache-for-redis/cache-planning-faq`
-- `/azure/azure-cache-for-redis/cache-best-practices`
-
-### Azure Managed Redis (AMR)
-- `/azure/azure-cache-for-redis/managed-redis/managed-redis-overview`
-- `/azure/azure-cache-for-redis/managed-redis/managed-redis-architecture`
-- `/azure/azure-cache-for-redis/managed-redis/managed-redis-best-practices-sku`
+### Azure Managed Redis
+- `/azure/redis/overview` - AMR overview and tier selection
+- `/azure/redis/architecture` - AMR architecture and clustering policies
 
 ### Migration
-- `/azure/azure-cache-for-redis/managed-redis/managed-redis-migration`
-- `/azure/azure-cache-for-redis/cache-migration-guide`
+- `/azure/redis/migrate/migrate-overview` - Migration hub (3-phase: understand, options, plan)
+- `/azure/redis/migrate/migrate-basic-standard-premium-options` - BSP migration options (self-service vs tooling)
+- `/azure/redis/migrate/migrate-basic-standard-premium-understand` - Feature differences and SKU selection guidance
+- `/azure/redis/migrate/migrate-basic-standard-premium-self-service` - Step-by-step self-service migration
+- `/azure/redis/migrate/migrate-basic-standard-premium-with-tooling` - Step-by-step migration with tooling (preview)
 
 ## Example MCP Queries
 
 ```
 # Fetch AMR overview
-mcp:microsoft-learn/fetch?path=/azure/azure-cache-for-redis/managed-redis/managed-redis-overview
+mcp:microsoft-learn/fetch?path=/azure/redis/overview
 
-# Fetch migration guide
-mcp:microsoft-learn/fetch?path=/azure/azure-cache-for-redis/managed-redis/managed-redis-migration
+# Fetch migration hub
+mcp:microsoft-learn/fetch?path=/azure/redis/migrate/migrate-overview
 ```
