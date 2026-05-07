@@ -19,7 +19,8 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 skill_version="$(tr -d '[:space:]' < "${script_dir}/../VERSION")"
 skill_ua="amr-migration-skill/${skill_version}"
-export AZURE_HTTP_USER_AGENT="$(printf '%s %s' "$(printf '%s' "${AZURE_HTTP_USER_AGENT:-}" | sed -E 's/[[:space:]]*amr-migration-skill\/[^[:space:]]+([[:space:]]+\([^)]*\))?//g')" "${skill_ua}" | sed -E 's/[[:space:]]+/ /g; s/^[[:space:]]+//; s/[[:space:]]+$//')"
+AZURE_HTTP_USER_AGENT="$(printf '%s %s' "$(printf '%s' "${AZURE_HTTP_USER_AGENT:-}" | sed -E 's/[[:space:]]*amr-migration-skill\/[^[:space:]]+([[:space:]]+\([^)]*\))?//g')" "${skill_ua}" | sed -E 's/[[:space:]]+/ /g; s/^[[:space:]]+//; s/[[:space:]]+$//')"
+export AZURE_HTTP_USER_AGENT
 
 usage() {
     echo "Usage: ./get_acr_metrics.sh <subscriptionId> <resourceGroup> <cacheName> [days]"
