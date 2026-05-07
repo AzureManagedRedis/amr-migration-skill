@@ -262,7 +262,7 @@ If `zones` is set and `zonalAllocationPolicy` is `UserDefined`, the cache is **z
 
 ### Step 3: Plan Migration
 1. Determine migration strategy (dual-write, snapshot/restore, etc.)
-2. **Clustering policy**: Use a context-dependent policy based on the source cache and target AMR size. For non-clustered ACR caches (Basic, Standard, non-clustered Premium) with target AMR SKU ≤ 24GB, use **NoCluster** to preserve single-endpoint behavior, avoid cross-slot errors, and retain the option to upgrade to clustered later without recreating the database. For non-clustered source caches with target AMR SKU > 24GB, use **Enterprise clustering policy** because larger AMR caches require clustering, and Enterprise clustering hides cluster topology from clients that are not cluster-aware. For clustered source caches (Premium with `shardCount` ≥ 1), use **OSS clustering** — the client is already cluster-aware, and OSS clustering offers better performance.
+2. **Clustering policy**: Choose based on source cache type and target AMR size. See [Migration Overview](references/migration-overview.md) for guidance or [AMR Template Structure §6](references/iac-amr-template-structure.md#6-clustering-policy-decision-matrix) for the full decision matrix.
 3. **Network isolation**: ACR caches using VNet injection must be replaced with **Private Link** on AMR, as AMR does not support VNet injection. Ensure Private Endpoints are configured before cutover.
 4. Plan for potential downtime or data sync requirements
 5. Update application connection strings and configuration
