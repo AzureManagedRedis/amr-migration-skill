@@ -62,7 +62,7 @@ This document provides a comparison of features between Azure Cache for Redis an
 | Feature | ACR Tiers | AMR |
 |---------|----------|-----|
 | Zone Redundancy | ✅ (Premium) | ✅ |
-| Geo-Replication | Passive (Premium; Failover supported) | Active (except B0, B1, Flash; no explicit Failover command) |
+| Geo-Replication | Passive (Premium; One-click failover supported) | Active (except B0, B1, Flash; manual failover only) |
 | Data Persistence (RDB) | ✅ (Premium) | ✅ |
 | Data Persistence (AOF) | ✅ (Premium) | ✅ |
 
@@ -78,7 +78,7 @@ This document provides a comparison of features between Azure Cache for Redis an
 | Private Endpoint | ✅ | ✅ |
 | Microsoft Entra Authentication | ✅ | ✅ |
 | Access Key Authentication | ✅ | ✅ |
-| RBAC | ✅ | ❌ (Entra ID RBAC not yet supported; Entra ID auth only) |
+| RBAC | ✅ (with Entra ID auth only) | ❌ (not yet supported) |
 
 ## Operational & Compatibility
 
@@ -86,7 +86,7 @@ This document provides a comparison of features between Azure Cache for Redis an
 |---------|----------|-----|
 | Redis Databases | Up to 16 by default, 64 on Premium | Database 0 only; use key prefixes for logical separation |
 | Keyspace Notifications | ✅ | ❌ (not currently available) |
-| Reboot | ✅ (manual node reboot) | ❌ (nodes managed automatically; use Flush to clear data) |
+| Reboot | ✅ (manual node reboot) | ❌ |
 | Scheduled Updates | ✅ | ✅ (Preview) |
 
 ## Performance Tiers
@@ -112,7 +112,7 @@ This document provides a comparison of features between Azure Cache for Redis an
 4. Assess impact of potential Redis module adoption
 5. Check if the application uses multiple Redis databases
 6. Check if the application relies on keyspace notifications
-7. Check if the application connects via both TLS and non-TLS ports simultaneously
+7. Check if both 6380 (TLS) and 6379 (non-TLS) ports are enabled
 
 ### Breaking Changes to Watch For
 - Command syntax differences between Redis versions
