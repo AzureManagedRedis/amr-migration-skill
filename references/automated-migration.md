@@ -34,7 +34,8 @@ These exclusions are expected to be supported in future releases.
 
 **Artifacts NOT migrated** (manual action required after migration):
 - Cache data (not yet supported)
-- Entra ID configurations — consider adopting [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/managed-redis/managed-redis-entra-for-access-control-configuration) post-migration as the recommended auth method
+- Entra ID configurations — consider adopting [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/entra-for-authentication) post-migration as the recommended auth method
+- Firewall rules
 - Maintenance schedules
 - Keyspace notifications
 - Managed identity for storage accounts (used for import/export, not for persistence — AMR manages persistence storage internally)
@@ -153,13 +154,18 @@ Cancel a failed or completed migration. Reverses DNS changes (~5+ minutes):
 # Add --track to wait for completion
 ```
 
+> [!IMPORTANT]
+> Rollback is only available for a limited time after a successful migration. Validate application behavior promptly if you might need to cancel.
+
 ### 5. Post-Migration
 
 After a successful migration with DNS switching:
 - The **source ACR cache continues to exist** and will incur charges. It is not automatically deleted.
+- The old Azure Cache for Redis hostname continues to point to AMR for a limited time, but it will be automatically deleted in the future.
+- Update your applications to use the new AMR hostname as soon as possible.
 - Verify your application is working correctly against the new AMR instance — monitor for expected behavior, performance, and error rates.
 - Once validated, **delete the old ACR instance** to stop billing.
-- Consider switching to [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/managed-redis/managed-redis-entra-for-access-control-configuration) instead of access keys.
+- Consider switching to [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/entra-for-authentication) instead of access keys.
 
 ---
 

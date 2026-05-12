@@ -2,7 +2,7 @@
 
 > **Source**: https://learn.microsoft.com/en-us/azure/redis/migrate/migrate-overview
 > 
-> **Last Updated**: February 2026 - Check source URL for the latest information.
+> **Last Updated**: May 2026 - Check source URL for the latest information.
 
 ## Overview
 
@@ -28,9 +28,11 @@ Key migration highlights:
 |---------|----------------------|---------------------|
 | DNS suffix | `.redis.cache.windows.net` | `<region>.redis.azure.net` |
 | TLS port | 6380 | **10000** |
-| Non-TLS port | 6379 | Not supported |
+| Non-TLS port | 6379 | 10000 (Plaintext mode) |
 | Node TLS ports | 13XXX | 85XX |
 | Redis version | 6 | 7.4 |
+
+> **Note**: AMR uses port 10000 for either TLS or Plaintext. The `clientProtocol` mode is set at cache creation, and only one mode is active at a time.
 
 ---
 
@@ -38,7 +40,20 @@ Key migration highlights:
 
 For detailed SKU mapping tables (Basic/Standard, Premium non-clustered, and Premium clustered with per-shard-count mappings), see the [SKU Mapping Guide](sku-mapping.md).
 
-> **Important — Clustering Policy**: Non-clustered ACR caches (Basic, Standard, and non-clustered Premium) should be migrated to AMR with **Enterprise clustering policy** enabled. AMR uses clustering internally for all SKUs, and the default OSS clustering policy exposes cluster topology to the client, which may require application code changes (e.g., switching to a cluster-aware Redis client). Enterprise clustering policy hides this from the application, preserving the single-endpoint behavior these caches had on ACR.
+> **Important — Clustering Policy**:
+>
+> If the ACR cache has clustering enabled, the AMR cache should always use the OSSCluster policy. No changes will be needed in the client application.
+>
+> For other caches where the cache capacity will not exceed 24GB, a non-clustered AMR cache should be used.
+>
+> Caches that do not meet the above criteria should use OSSCluster if possible. However, to use OSSCluster all of the following need to be true:
+> - The client is a .NET application using StackExchange.Redis OR the application can be updated to configure the client library to use clustered mode. See client library docs for guidance on how to connect to clustered Redis.
+> - The client does not use any multi-key commands or LUA scripts. If it does operate on multiple keys at once, the application may need to be updated to use [hash tags](https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/#hash-tags) to group related keys together into a single slot.
+> - The application is not planning to use the RediSearch module in AMR, which requires EnterpriseCluster.
+>
+> If OSSCluster cannot be used for one of the reasons above, then EnterpriseCluster should be used. This is helpful for situations where the client application cannot be updated to connect to clustered Redis, because EnterpriseCluster emulates non-clustered Redis on a superficial level. However, EnterpriseCluster will have lower performance than OSSCluster and will still produce CROSSSLOT errors if a command or LUA script is executed that operates on keys spread across multiple slots.
+>
+> See [AMR Template Structure §6](iac-amr-template-structure.md#6-clustering-policy-decision-matrix) for the full decision matrix.
 
 > **Important — Network Isolation**: AMR does not support VNet injection. ACR Premium caches using VNet injection should be migrated to AMR with **Private Link** (Private Endpoints) for network isolation.
 

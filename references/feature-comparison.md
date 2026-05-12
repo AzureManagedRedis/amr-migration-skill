@@ -2,7 +2,7 @@
 
 This document provides a comparison of features between Azure Cache for Redis and AMR.
 
-> **Note**: For the most up-to-date information, use the Microsoft Learn MCP server to fetch current documentation from `https://learn.microsoft.com/azure/azure-cache-for-redis/`.
+> **Note**: For the most up-to-date information, use the Microsoft Learn MCP server to fetch current documentation from `https://learn.microsoft.com/azure/redis/`.
 
 ## Overview
 
@@ -53,7 +53,7 @@ This document provides a comparison of features between Azure Cache for Redis an
 | Feature | ACR Tiers | AMR |
 |---------|----------|-----|
 | Clustering | ✅ (Premium tier) | ✅ |
-| Non-clustered Mode | ✅ | ✅ |
+| Non-clustered Mode | ✅ | ✅ (≤ 24 GB) |
 | Online Scaling | ✅ | ✅ |
 | Max Shards | 15 (Premium) | N/A (sharding is managed internally) |
 
@@ -62,20 +62,32 @@ This document provides a comparison of features between Azure Cache for Redis an
 | Feature | ACR Tiers | AMR |
 |---------|----------|-----|
 | Zone Redundancy | ✅ (Premium) | ✅ |
-| Geo-Replication | Passive (Premium) | Active (except B0, B1, Flash) |
+| Geo-Replication | Passive (Premium; One-click failover supported) | Active (except B0, B1, Flash; manual failover only) |
 | Data Persistence (RDB) | ✅ (Premium) | ✅ |
 | Data Persistence (AOF) | ✅ (Premium) | ✅ |
+
+> **Note**: AMR geo-replication is active. Because there is no explicit Failover command, applications must handle region failover themselves.
 
 ## Security
 
 | Feature | ACR Tiers | AMR |
 |---------|----------|-----|
 | TLS Encryption | ✅ | ✅ |
+| TLS/Non-TLS Mode | TLS 6380 + non-TLS 6379 simultaneously | One mode only at a time on port 10000; set at creation via `clientProtocol` |
 | VNet Integration | ✅ (Premium) | ❌ (use Private Link) |
 | Private Endpoint | ✅ | ✅ |
 | Microsoft Entra Authentication | ✅ | ✅ |
 | Access Key Authentication | ✅ | ✅ |
-| RBAC | ✅ | ✅ |
+| RBAC | ✅ (with Entra ID auth only) | ❌ (not yet supported) |
+
+## Operational & Compatibility
+
+| Feature | ACR Tiers | AMR |
+|---------|----------|-----|
+| Redis Databases | Up to 16 by default, 64 on Premium | Database 0 only; use key prefixes for logical separation |
+| Keyspace Notifications | ✅ | ❌ (not currently available) |
+| Reboot | ✅ (manual node reboot) | ❌ |
+| Scheduled Updates | ✅ | ✅ (Preview) |
 
 ## Performance Tiers
 
@@ -98,6 +110,9 @@ This document provides a comparison of features between Azure Cache for Redis an
 2. Verify Redis commands compatibility
 3. Review client library compatibility with Redis 7.x
 4. Assess impact of potential Redis module adoption
+5. Check if the application uses multiple Redis databases
+6. Check if the application relies on keyspace notifications
+7. Check if both 6380 (TLS) and 6379 (non-TLS) ports are enabled
 
 ### Breaking Changes to Watch For
 - Command syntax differences between Redis versions
@@ -108,6 +123,7 @@ This document provides a comparison of features between Azure Cache for Redis an
 ## Additional Resources
 
 Fetch the latest documentation using the MCP server:
-- AMR Overview: `/azure/azure-cache-for-redis/managed-redis/managed-redis-overview`
-- Migration Guide: `/azure/azure-cache-for-redis/managed-redis/managed-redis-migration`
-- SKU Selection: `/azure/azure-cache-for-redis/managed-redis/managed-redis-best-practices-sku`
+- AMR Overview: `/azure/redis/overview` - Consolidated Azure Managed Redis overview and tier selection guidance
+- Migration Hub: `/azure/redis/migrate/migrate-overview` - Three-phase migration hub: understand differences, compare options, and plan execution
+- Migration Options: `/azure/redis/migrate/migrate-basic-standard-premium-options` - Compares self-service (recommended) with migration tooling (preview)
+- SKU Selection Guidance: `/azure/redis/migrate/migrate-basic-standard-premium-understand` - ACR vs AMR differences plus size and SKU selection guidance

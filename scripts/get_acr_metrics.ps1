@@ -34,6 +34,12 @@ param(
 # Enforce TLS 1.2+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+# Azure CLI appends AZURE_HTTP_USER_AGENT to its default User-Agent on every request made via 'az rest'.
+$versionFile = Join-Path $PSScriptRoot '..' 'VERSION'
+$skillVersion = (Get-Content -Raw -Path $versionFile -ErrorAction Stop).Trim()
+$skillUserAgent = "amr-migration-skill/$skillVersion"
+$env:AZURE_HTTP_USER_AGENT = ((($env:AZURE_HTTP_USER_AGENT -replace '\s*amr-migration-skill/[^\s]+(?:\s+\([^)]*\))?', '') + " $skillUserAgent") -replace '\s+', ' ').Trim()
+
 Write-Host "============================================================"
 Write-Host "Azure Cache for Redis - Metrics Query"
 Write-Host "============================================================"
