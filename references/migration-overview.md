@@ -40,7 +40,20 @@ Key migration highlights:
 
 For detailed SKU mapping tables (Basic/Standard, Premium non-clustered, and Premium clustered with per-shard-count mappings), see the [SKU Mapping Guide](sku-mapping.md).
 
-> **Important — Clustering Policy**: Clustering policy selection is context-dependent. For non-clustered ACR caches with target AMR SKU ≤ 24GB, use **NoCluster** to preserve single-endpoint behavior and avoid cross-slot errors. For non-clustered sources with target > 24GB, use **Enterprise clustering policy** (hides cluster topology from clients, though CROSSSLOT errors are still possible with multi-key commands like `MGET` or Lua scripts accessing keys in different hash slots). For clustered sources (Premium with `shardCount` ≥ 1), use **OSS clustering** for better performance if the client is already cluster-aware. See [AMR Template Structure §6](iac-amr-template-structure.md#6-clustering-policy-decision-matrix) for the full decision matrix.
+> **Important — Clustering Policy**:
+>
+> If the ACR cache has clustering enabled, the AMR cache should always use the OSSCluster policy. No changes will be needed in the client application.
+>
+> For other caches where the cache capacity will not exceed 24GB, a non-clustered AMR cache should be used.
+>
+> Caches that do not meet the above criteria should use OSSCluster if possible. However, to use OSSCluster all of the following need to be true:
+> - The client is a .NET application using StackExchange.Redis OR the application can be updated to configure the client library to use clustered mode. See client library docs for guidance on how to connect to clustered Redis.
+> - The client does not use any multi-key commands or LUA scripts. If it does operate on multiple keys at once, the application may need to be updated to use [hash tags](https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/#hash-tags) to group related keys together into a single slot.
+> - The application is not planning to use the RediSearch module in AMR, which requires EnterpriseCluster.
+>
+> If OSSCluster cannot be used for one of the reasons above, then EnterpriseCluster should be used. This is helpful for situations where the client application cannot be updated to connect to clustered Redis, because EnterpriseCluster emulates non-clustered Redis on a superficial level. However, EnterpriseCluster will have lower performance than OSSCluster and will still produce CROSSSLOT errors if a command or LUA script is executed that operates on keys spread across multiple slots.
+>
+> See [AMR Template Structure §6](iac-amr-template-structure.md#6-clustering-policy-decision-matrix) for the full decision matrix.
 
 > **Important — Network Isolation**: AMR does not support VNet injection. ACR Premium caches using VNet injection should be migrated to AMR with **Private Link** (Private Endpoints) for network isolation.
 
