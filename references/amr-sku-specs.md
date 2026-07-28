@@ -1,6 +1,6 @@
 # AMR SKU Specifications
 
-> **Last Updated**: February 2026
+> **Last Updated**: July 2026
 
 For migration guidelines, mapping tables, and decision matrix, see [SKU Mapping Guide](sku-mapping.md).
 
@@ -21,7 +21,7 @@ Best for: Caching workloads with large datasets and moderate throughput requirem
 | M100 | 120 | 96 | 16 | 150,000 |
 | M150 | 175 | 140 | 24 | 200,000 |
 | M250 | 235 | 188 | 32 | 200,000 |
-| M350* | 360 | 288 | 48 | 200,000 |
+| M350 | 360 | 288 | 48 | 200,000 |
 | M500* | 480 | 384 | 64 | 200,000 |
 | M700* | 720 | 576 | 96 | 200,000 |
 | M1000* | 960 | 768 | 128 | 200,000 |
@@ -43,7 +43,7 @@ Best for: General-purpose workloads with balanced compute and memory needs. Memo
 | B100 | 120 | 96 | 32 | 200,000 |
 | B150 | 180 | 144 | 48 | 200,000 |
 | B250 | 240 | 192 | 64 | 200,000 |
-| B350* | 360 | 288 | 96 | 200,000 |
+| B350 | 360 | 288 | 96 | 200,000 |
 | B500* | 480 | 384 | 128 | 200,000 |
 | B700* | 720 | 576 | 192 | 200,000 |
 | B1000* | 960 | 768 | 256 | 200,000 |
@@ -61,7 +61,7 @@ Best for: Performance-intensive workloads requiring maximum throughput. Memory-t
 | X100 | 120 | 96 | 64 | 200,000 |
 | X150 | 180 | 144 | 96 | 200,000 |
 | X250 | 240 | 192 | 128 | 200,000 |
-| X350* | 360 | 288 | 192 | 200,000 |
+| X350 | 360 | 288 | 192 | 200,000 |
 | X500* | 480 | 384 | 256 | 200,000 |
 | X700* | 720 | 576 | 384 | 200,000 |
 
@@ -74,15 +74,15 @@ Best for: Very large datasets where tiered storage (RAM + SSD) is cost-effective
 
 | SKU | Cache Size (GB) | VM Memory (GiB) | Disk Size (GiB) | vCPUs | Max Connections |
 |-----|-----------------|-----------------|-----------------|-------|-----------------|
-| A250* | 250 | 64 | 1920 | 8 | 75,000 |
-| A500* | 500 | 128 | 3840 | 16 | 150,000 |
-| A700* | 750 | 192 | 5760 | 24 | 200,000 |
-| A1000* | 1000 | 256 | 7680 | 32 | 200,000 |
-| A1500* | 1500 | 384 | 11520 | 48 | 200,000 |
+| A250 | 250 | 64 | 1920 | 8 | 75,000 |
+| A500 | 500 | 128 | 3840 | 16 | 150,000 |
+| A700 | 750 | 192 | 5760 | 24 | 200,000 |
+| A1000 | 1000 | 256 | 7680 | 32 | 200,000 |
+| A1500 | 1500 | 384 | 11520 | 48 | 200,000 |
 | A2000* | 2000 | 512 | 15360 | 64 | 200,000 |
 | A4500* | 4500 | 1152 | 34560 | 144 | 200,000 |
 
-\* All Flash Optimized SKUs are in Public Preview.
+\* Sizes marked with asterisk are in Public Preview.
 
 ---
 
