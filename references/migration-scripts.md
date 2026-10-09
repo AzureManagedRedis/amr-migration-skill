@@ -63,7 +63,7 @@ PUT {basePath}?api-version=2025-08-01-preview
 - `cacheResourceType`: Always `"AzureCacheForRedis"` for ACR → AMR migrations. **Note**: The ARM template spec (`Microsoft.Cache/redisEnterprise/migrations`) uses `sourceType` as the property name for this same field. The REST API request body uses `cacheResourceType`. Both refer to the same concept — the scripts use `cacheResourceType` which is correct for the REST API path.
 - `forceMigrate`: When `true`, bypasses validation warnings (not errors). Default `false`.
 - `switchDns`: When `true`, the old ACR hostname (`.redis.cache.windows.net`) is re-pointed to the AMR cache via DNS. Currently hardcoded to `true` in both scripts — this is the core value of automated migration.
-- `skipDataMigration`: Currently hardcoded to `true` because data migration is not yet supported. When data migration becomes available, this field will control whether cache data is copied.
+- `skipDataMigration`: `true` by default. Set to `false` only when the user explicitly selects data migration. The scripts expose this as `-MigrateData` (PowerShell) and `--migrate-data` (Bash). Validate and Migrate must use the same value.
 
 **Response**: Returns the migration resource with `provisioningState` (`Accepted` → `InProgress` → `Succeeded`/`Failed`).
 
@@ -92,9 +92,9 @@ No request body. Reverses the DNS switch and port forwarding. Takes ~5 minutes. 
 1. Parse `TargetResourceId` via regex → extract subscription, resource group, cache name
 2. Verify Azure CLI login via `az account show`; fail with guidance if not logged in
 3. Switch subscription context if needed via `az account set`
-4. Build JSON payload with `ConvertTo-Json`
+4. Set `skipDataMigration` from the `-MigrateData` switch and build the JSON payload with `ConvertTo-Json`
 5. Call `az rest` with the appropriate HTTP method and URL via a wrapper function that checks `$LASTEXITCODE`
-6. If `-TrackMigration` is set, enters a polling loop: calls GET Status every 30 seconds until a terminal state (`Succeeded`, `Failed`, `Canceled`) or timeout (30 minutes). Transient polling errors are retried up to 5 times.
+6. If `-TrackMigration` is set, enters a polling loop: calls GET Status every 30 seconds until a terminal state (`Succeeded`, `Failed`, `Canceled`) or timeout (30 minutes, or 60 minutes when `-MigrateData` is set). Transient polling errors are retried up to 5 times.
 7. Print response as pretty-printed JSON
 
 **Key dependency**: Requires **Azure CLI** (`az`). Run `az login` before using the script. PowerShell 7+ is required.
@@ -106,9 +106,9 @@ No request body. Reverses the DNS switch and port forwarding. Takes ~5 minutes. 
 3. Parse `TargetResourceId` via bash regex (`=~`)
 4. Verify Azure CLI login via `az account show`, switch subscription if needed
 5. **Confirm destructive actions** (Migrate, Cancel) with interactive prompt; skip with `--yes`
-6. Build JSON payload with `jq -n` (avoids shell escaping issues)
+6. Set `skipDataMigration` from the `--migrate-data` option and build the JSON payload with `jq -n` (avoids shell escaping issues)
 7. Call `az rest` with `--body` containing the JSON payload
-8. If `--track` is set, enters a polling loop: calls GET Status every 30 seconds until a terminal state (`Succeeded`, `Failed`, `Canceled`) or timeout (30 minutes)
+8. If `--track` is set, enters a polling loop: calls GET Status every 30 seconds until a terminal state (`Succeeded`, `Failed`, `Canceled`) or timeout (30 minutes, or 60 minutes when `--migrate-data` is set)
 
 **Key dependency**: Requires **Azure CLI** (`az`) and **jq**. Uses whichever Azure session `az login` established.
 
@@ -122,6 +122,7 @@ No request body. Reverses the DNS switch and port forwarding. Takes ~5 minutes. 
 | **Response headers** | Not displayed (limitation of `az rest` output; use Azure Portal Activity Log for correlation IDs) | Not displayed (same limitation) |
 | **JSON output** | Pretty-printed via `ConvertTo-Json` | Pretty-printed via `jq .` |
 | **Sovereign cloud** | Implicit — uses whatever cloud the CLI is configured for | Implicit — uses whatever cloud the CLI is configured for |
+| **Data migration opt-in** | `-MigrateData` | `--migrate-data` |
 
 ## Troubleshooting
 

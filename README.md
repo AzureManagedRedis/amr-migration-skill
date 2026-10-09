@@ -108,6 +108,7 @@ Try these prompts to get started:
 ### Automated Migration (ARM REST API)
 - **"Validate whether my ACR cache can be migrated to AMR automatically using the migration script."**
 - **"Run the automated migration from my ACR cache `my-cache` to my AMR cache `my-amr-cache` with DNS switching."**
+- **"Run an automated migration that includes my cache data."**
 - **"Check the status of my ongoing AMR migration."**
 - **"Cancel / rollback my AMR migration."**
 - **"I'm getting a validation warning about clustering policy mismatch. Should I force the migration?"**

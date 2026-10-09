@@ -23,13 +23,13 @@
     {
       "id": 2,
       "prompt": "I have a Premium P2 cache called 'prod-cache-01' in resource group 'rg-prod' and an AMR cache called 'prod-amr-01' in the same RG, both in eastus. I want to do an automated migration with DNS switching. Walk me through it step by step and run the validation for me.",
-      "expected_output": "Uses the automated migration script (or az rest equivalent) to validate. Constructs proper ARM resource IDs from the cache names. Follows the Validate -> Migrate -> Status workflow. Mentions supported scope limitations (data not migrated yet).",
+      "expected_output": "Constructs the resource IDs and prepares the automated migration validation. Because the prompt does not mention cache data, asks whether the migration should copy cache data and uses the answer. Uses the same data migration selection for Validate and Migrate.",
       "files": [],
       "expectations": [
         "Constructs or shows the full ARM resource IDs for both source and target",
         "Runs or shows the Validate action before attempting Migrate",
         "Uses the migration script or az rest to call the ARM API — does not just describe it theoretically",
-        "Mentions that data migration is not yet supported (skipDataMigration)",
+        "Asks whether the migration should copy cache data, because the prompt does not mention it",
         "Mentions the ability to rollback/cancel if needed"
       ]
     },
@@ -48,12 +48,12 @@
     {
       "id": 4,
       "prompt": "I'm running a Premium P1 cache with VNet injection and private endpoints in eastus2. It also has geo-replication set up with a secondary in westus2. Can I use the automated migration API to move to AMR?",
-      "expected_output": "Correctly identifies that this cache is NOT eligible for automated migration due to VNet injection, private endpoints, and geo-replication — all three are unsupported. Recommends manual migration strategies instead. Mentions the need to switch from VNet injection to Private Link on AMR.",
+      "expected_output": "Correctly identifies that this cache is NOT eligible for automated migration due to VNet injection and geo-replication. Recommends manual migration strategies instead. Mentions the need to switch from VNet injection to Private Link on AMR.",
       "files": [],
       "expectations": [
         "Identifies VNet injection as a blocker for automated migration",
         "Identifies geo-replication as a blocker for automated migration",
-        "Identifies private endpoints as a blocker for automated migration",
+        "Does not claim private endpoints block automated migration — they block data migration only",
         "Suggests a manual migration strategy as an alternative",
         "Mentions that AMR uses Private Link instead of VNet injection"
       ]
@@ -72,6 +72,18 @@
         "Numeric values are sane: memory > 0, server load between 0-100%, connected clients >= 0, bandwidth >= 0",
         "Produces a specific AMR SKU recommendation (e.g., M20, B10, X10) — not a generic 'pick an M-series'",
         "References the SKU mapping guide or AMR SKU specs when making the recommendation"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "I want to migrate data as part of an automated migration from a Premium P2 cache to an AMR B5 target. My ACR cache uses multiple databases. Validate the migration for me.",
+      "expected_output": "Uses the data migration option for validation, warns because the B5 target has less usable capacity than the P2 source, and asks the user to verify actual peak memory usage. Because the user stated the cache uses multiple databases, explains the single-database limitation.",
+      "files": [],
+      "expectations": [
+        "Uses -MigrateData, --migrate-data, or skipDataMigration=false for the Validate action",
+        "Warns that the B5 target has less usable memory than the P2 source, naming both sizes",
+        "Recommends checking actual peak Used Memory, or running the get_acr_metrics script, before proceeding with migration",
+        "Explains that Azure Managed Redis supports a single database (database 0) because the prompt mentioned multi-database usage"
       ]
     }
   ]

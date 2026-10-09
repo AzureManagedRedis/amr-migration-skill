@@ -24,6 +24,7 @@
 #   --source, -s          Source ACR resource ID (required for Migrate, Validate)
 #   --target, -t          Target AMR resource ID (required for all actions)
 #   --force-migrate       Bypass validation warnings (default: false)
+#   --migrate-data        Include cache data as part of migration (default: false)
 #   --track               Wait for long-running operation to complete (default: false)
 #   --yes, -y             Skip confirmation prompt for destructive actions (Migrate, Cancel)
 #   --api-version         ARM API version (default: 2025-08-01-preview)
@@ -35,6 +36,13 @@
 #     --action Validate \
 #     --source "/subscriptions/xxx/resourceGroups/rg1/providers/Microsoft.Cache/Redis/redis1" \
 #     --target "/subscriptions/xxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1"
+#
+#   # Validate a migration that includes cache data
+#   ./azure-redis-migration-arm-rest-api-utility.sh \
+#     --action Validate \
+#     --source "/subscriptions/xxx/resourceGroups/rg1/providers/Microsoft.Cache/Redis/redis1" \
+#     --target "/subscriptions/xxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1" \
+#     --migrate-data
 #
 #   # Migrate with tracking
 #   ./azure-redis-migration-arm-rest-api-utility.sh \
@@ -75,6 +83,7 @@ ACTION=""
 SOURCE_RESOURCE_ID=""
 TARGET_RESOURCE_ID=""
 FORCE_MIGRATE="false"
+MIGRATE_DATA="false"
 TRACK_MIGRATION="false"
 SKIP_CONFIRMATION="false"
 API_VERSION="2025-08-01-preview"
@@ -196,7 +205,11 @@ poll_status() {
     url="$(get_base_url)?api-version=${API_VERSION}"
     local state="InProgress"
     local attempt=0
+    # Data migration adds a synchronization phase before cutover, so allow more time for it.
     local max_attempts=60  # 30 minutes max (30s intervals)
+    if [[ "$MIGRATE_DATA" == "true" ]]; then
+        max_attempts=120  # 60 minutes max when data migration is enabled
+    fi
     local response
     local details
 
@@ -222,7 +235,7 @@ poll_status() {
     elif [[ "$state" == "Canceled" ]]; then
         echo "Operation was canceled."
     else
-        echo -e "${RED}Timed out waiting for operation to complete (last state: $state).${NC}"
+        echo -e "${RED}Timed out waiting for operation to complete (last state: $state). The operation may still be running — use --action Status to check.${NC}"
     fi
 
     # Print final status
@@ -240,6 +253,8 @@ while [[ $# -gt 0 ]]; do
             TARGET_RESOURCE_ID="$2"; shift 2 ;;
         --force-migrate)
             FORCE_MIGRATE="true"; shift ;;
+        --migrate-data)
+            MIGRATE_DATA="true"; shift ;;
         --track)
             TRACK_MIGRATION="true"; shift ;;
         --api-version)
@@ -275,22 +290,30 @@ parse_target_resource_id "$TARGET_RESOURCE_ID"
 ensure_login
 
 BASE_URL=$(get_base_url)
+SKIP_DATA_MIGRATION="true"
+DATA_MIGRATION_MODE="disabled"
+if [[ "$MIGRATE_DATA" == "true" ]]; then
+    SKIP_DATA_MIGRATION="false"
+    DATA_MIGRATION_MODE="enabled"
+fi
 
 # --- Execute Action ---
 case "$ACTION_LOWER" in
     validate)
         info "Validating whether migration can be performed between source and target caches..."
+        info "Data migration: ${DATA_MIGRATION_MODE}"
         echo
 
         payload=$(jq -n \
             --arg sourceId "$SOURCE_RESOURCE_ID" \
-            '{properties: {sourceResourceId: $sourceId, skipDataMigration: true}}')
+            --argjson skipDataMigration "$SKIP_DATA_MIGRATION" \
+            '{properties: {sourceResourceId: $sourceId, skipDataMigration: $skipDataMigration}}')
 
         arm_rest POST "${BASE_URL}/validate" "$payload"
         ;;
 
     migrate)
-        confirm_action "Migrate cache (DNS switch): ${SOURCE_RESOURCE_ID} -> ${TARGET_RESOURCE_ID}"
+        confirm_action "Migrate cache (DNS switch, data migration ${DATA_MIGRATION_MODE}): ${SOURCE_RESOURCE_ID} -> ${TARGET_RESOURCE_ID}"
 
         if [[ "$TRACK_MIGRATION" == "true" ]]; then
             info "Triggering migration and tracking until completion..."
@@ -302,7 +325,8 @@ case "$ACTION_LOWER" in
         payload=$(jq -n \
             --arg sourceId "$SOURCE_RESOURCE_ID" \
             --argjson force "$FORCE_MIGRATE" \
-            '{properties: {sourceResourceId: $sourceId, cacheResourceType: "AzureCacheForRedis", forceMigrate: $force, switchDns: true, skipDataMigration: true}}')
+            --argjson skipDataMigration "$SKIP_DATA_MIGRATION" \
+            '{properties: {sourceResourceId: $sourceId, cacheResourceType: "AzureCacheForRedis", forceMigrate: $force, switchDns: true, skipDataMigration: $skipDataMigration}}')
 
         arm_rest PUT "$BASE_URL" "$payload"
 
