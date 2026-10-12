@@ -220,7 +220,7 @@ The pricing scripts construct OData `$filter` queries using user-supplied Region
 2. **Azure authentication is pre-established** — scripts rely on existing `az login` sessions. They do not handle or store long-lived credentials.
 3. **AI agent orchestration** — scripts may be invoked by an AI agent (GitHub Copilot) that constructs parameters from user conversation. The agent is trusted to the same level as the user.
 4. **Public preview API** — the migration ARM API (`2025-08-01-preview`) is in preview. Behavior may change, and the API version will need to be updated.
-5. **No customer data in scripts** — cache data itself is never read, stored, or transmitted by these scripts. Migration with `skipDataMigration: true` only switches DNS and port forwarding.
+5. **No direct customer data access** — the scripts can request service-managed data migration, but they do not read, store, or output cache contents. Data migration is disabled by default and requires the explicit `-MigrateData` or `--migrate-data` option.
 
 ---
 

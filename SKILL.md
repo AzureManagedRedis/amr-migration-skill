@@ -290,9 +290,9 @@ Azure offers an **automated migration path** from ACR to AMR via ARM REST APIs, 
 > **Important**: This feature is currently in **Public Preview**. Use the manual migration strategies (Steps 1–4 above) for production workloads until GA.
 
 **Key facts:**
-- Supported: All Basic/Standard/Premium SKUs — **except** Private Link, VNet injected, or Geo-Replicated caches
+- Supported: All Basic/Standard/Premium SKUs — **except** VNet injected or Geo-Replicated caches. Private Link and clustered caches can be migrated, but are not eligible for data migration
 - Source and target must be in the **same region and subscription**
-- Migrates: access keys, OSS host endpoint (DNS switch), OSS port. Does **not** migrate cache data, Entra ID, persistence config, or managed identities
+- Migrates: access keys, OSS host endpoint (DNS switch), OSS port, cache data (if requested). Does **not** migrate Entra ID, persistence config, or managed identities
 - Workflow: **Validate → Migrate → Status → Cancel (Rollback)**
 - Also available via the [Azure Portal](https://aka.ms/redis/portal/prod/migrate) behind a feature flag
 

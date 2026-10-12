@@ -15,7 +15,8 @@ These are **blocking** — migration cannot proceed until resolved:
 | Source and target must be in the same region | Select a target in the same Azure region as the source |
 | Source and target must be in the same subscription | Move or recreate the target AMR cache in the same subscription as the source |
 | Geo-replication enabled on source | Disable geo-replication on the source before migration |
-| Private endpoints on source | Remove private endpoints from the source before migration |
+| Data migration not supported for source resources that have private endpoints | Only returned when data migration is requested. Re-run without data migration, or remove private endpoints from the source. |
+| Data migration not supported for clustered source resources | Only returned when data migration is requested. Re-run without data migration. |
 | VNet injection enabled on source | Automated migration is not supported for VNet-injected caches. Use an alternative migration strategy (see [Migration Overview](migration-overview.md)). |
 | TLS mismatch (source TLS-only, target non-TLS) | Configure the target database to support TLS connections |
 
@@ -25,8 +26,8 @@ These are **non-blocking** — can be bypassed with `-ForceMigrate $true` (Power
 
 | Warning | Resolution |
 |---------|------------|
-| Data migration not currently supported | Plan for manual data migration or accept data loss |
-| Source has multiple databases; only DB 0 migrated | Manually migrate data from other databases |
+| The source resource contains keys outside database 0. Only data from database 0 will be migrated. | Only returned when data migration is requested. Migrate data in other logical databases manually if it is needed. |
+| The source resource has one or more private endpoints. Private endpoint settings are not copied as part of migration. | Recreate private endpoints on the target AMR resource after migration. Note that data migration is not supported when the source has private endpoints. |
 | System-assigned managed identity not copied | System-assigned identities are unique per resource and cannot be copied. If the source ACR used SAMI for import/export to a storage account, enable SAMI on the target AMR resource and grant it the required role (e.g., Storage Blob Data Contributor) on the storage account. Note: AMR persistence itself uses managed disks internally and does not require a user storage account. |
 | User-assigned managed identities not copied | If the source ACR had user-assigned managed identities (e.g., for import/export to a storage account), assign them to the target AMR resource after migration and ensure their role assignments on the storage account are still valid. |
 | Custom ACL roles not copied | Custom ACLs are not yet supported in AMR. AMR only has a built-in `default` access policy (equivalent to ACR's Data Owner with full data access). Evaluate whether the `default` policy is sufficient for your use case, or plan to adopt custom policies once AMR adds support. |

@@ -15,11 +15,12 @@ For detailed documentation on the underlying ARM API endpoints, request/response
 ## Supported Scope
 
 **Supported source SKUs**: All Basic (C0–C6), Standard (C0–C6), and Premium (P1–P5) — **except**:
-- Private Link enabled caches
 - VNet injected caches
 - Geo-Replication enabled caches
 
 These exclusions are expected to be supported in future releases.
+
+Private Link enabled caches and clustered caches can be migrated, but are not eligible for data migration.
 
 **Requirements**:
 - Source and target must be in the **same Azure region** (validation error if not)
@@ -31,9 +32,9 @@ These exclusions are expected to be supported in future releases.
 - Access keys (if enabled on the source)
 - OSS host endpoint (via DNS switch — the old `.redis.cache.windows.net` hostname routes to AMR)
 - OSS cache port (via port forwarding)
+- Cache data, when explicitly selected
 
 **Artifacts NOT migrated** (manual action required after migration):
-- Cache data (not yet supported)
 - Entra ID configurations — consider adopting [Microsoft Entra ID authentication](https://learn.microsoft.com/en-us/azure/redis/entra-for-authentication) post-migration as the recommended auth method
 - Firewall rules
 - Maintenance schedules
@@ -90,6 +91,21 @@ These exclusions are expected to be supported in future releases.
 
 The migration utility supports four actions: **Validate → Migrate → Status → Cancel (Rollback)**.
 
+### Cache Data Migration (Opt-In)
+
+Determine the user's choice before running Validate:
+
+- The user did not mention cache data → ask `Should the migration copy the cache data from <source cache> to <target cache>?`.
+- The user asked for cache data to be migrated → use `-MigrateData` / `--migrate-data`.
+- The user said they do not need cache data migrated → omit the `-MigrateData` / `--migrate-data` flags.
+
+Use the same choice for Validate and Migrate.
+
+If the user has chosen to migrate cache data, do the following:
+
+- Warn the user that migrating cache data clears all existing data in the target AMR database, including keys that do not conflict with source keys. Ask the user to confirm that this data can be discarded before proceeding.
+- Run `scripts/get_acr_metrics.ps1` or `scripts/get_acr_metrics.sh` to read the source cache's actual peak **Used Memory RSS**, and tell the user whether it fits within the target SKU's memory size ([AMR SKU Specifications](amr-sku-specs.md)).
+
 ### 1. Validate
 
 Performs a dry-run comparison of source and target configurations. Returns validation **errors** (blocking) and **warnings** (overridable). Always validate before migrating.
@@ -108,9 +124,25 @@ Performs a dry-run comparison of source and target configurations. Returns valid
 
 Fix any errors before proceeding. Warnings can be bypassed with `-ForceMigrate $true` / `--force-migrate` if the user accepts the trade-offs. See [Validation Errors & Warnings Reference](migration-validation.md) for the full list.
 
+To validate with data migration enabled:
+
+```powershell
+.\scripts\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action "Validate" `
+  -SourceResourceId "<sourceACRResourceId>" -TargetResourceId "<targetAMRResourceId>" `
+  -MigrateData
+```
+
+```bash
+./scripts/azure-redis-migration-arm-rest-api-utility.sh --action Validate \
+  --source "<sourceACRResourceId>" --target "<targetAMRResourceId>" \
+  --migrate-data
+```
+
 ### 2. Migrate
 
 Triggers the actual migration (~5+ minutes). DNS is switched automatically so existing clients using the old OSS endpoint are routed to the new AMR cache.
+
+When data migration is included, the migration takes longer because cache data is synchronized before DNS is switched. The tracking timeout is raised from 30 to 60 minutes when `-MigrateData` / `--migrate-data` is set. A tracking timeout does not mean the migration failed — re-check with the **Status** action.
 
 ```powershell
 # PowerShell — fire-and-forget
@@ -118,6 +150,7 @@ Triggers the actual migration (~5+ minutes). DNS is switched automatically so ex
   -SourceResourceId "<sourceACRResourceId>" -TargetResourceId "<targetAMRResourceId>"
 
 # Add -TrackMigration to wait for completion, -ForceMigrate $true to bypass warnings
+# Add -MigrateData only when the preceding Validate action used -MigrateData
 ```
 
 ```bash
@@ -126,6 +159,7 @@ Triggers the actual migration (~5+ minutes). DNS is switched automatically so ex
   --source "<sourceACRResourceId>" --target "<targetAMRResourceId>"
 
 # Add --track to wait for completion, --force-migrate to bypass warnings
+# Add --migrate-data only when the preceding Validate action used --migrate-data
 ```
 
 ### 3. Check Status
@@ -156,6 +190,8 @@ Cancel a failed or completed migration. Reverses DNS changes (~5+ minutes):
 
 > [!IMPORTANT]
 > Rollback is only available for a limited time after a successful migration. Validate application behavior promptly if you might need to cancel.
+>
+> If the migration included cache data, canceling or rolling back does not remove data already copied to AMR.
 
 ### 5. Post-Migration
 
@@ -177,7 +213,8 @@ After a successful migration with DNS switching:
 | `-SourceResourceId` | `--source`, `-s` | Validate, Migrate | Full ARM resource ID of the source ACR cache (`Microsoft.Cache/Redis/<name>`) |
 | `-TargetResourceId` | `--target`, `-t` | Always | Full ARM resource ID of the target AMR cache (`Microsoft.Cache/redisEnterprise/<name>`) |
 | `-ForceMigrate $true` | `--force-migrate` | No | Bypass validation warnings (default: false) |
-| `-TrackMigration` | `--track` | No | Wait for long-running operation to complete (default: off) |
+| `-MigrateData` | `--migrate-data` | No | Include cache data; use for both Validate and Migrate (default: off) |
+| `-TrackMigration` | `--track` | No | Wait for long-running operation to complete (default: off). Timeout is 30 minutes, or 60 minutes when data migration is enabled |
 | — | — | — | Both scripts use whichever Azure cloud `az` is logged into |
 
 ---

@@ -12,6 +12,8 @@
 .PARAMETER ForceMigrate
     If set to $true, migration proceeds even when source/target cache parity validation returns warnings.
     If set to $false (default), migration is blocked when validation returns any warning.
+.PARAMETER MigrateData
+    If set, includes cache data in the migration. By default, cache data is not migrated.
 .PARAMETER TrackMigration
     If set, the script will wait for the migration operation to complete (default is $false).
 .PARAMETER Help
@@ -21,6 +23,8 @@
     Validates whether a migration can be performed between the source and target caches.
     .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Migrate -SourceResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/Redis/redis1" -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1" -TrackMigration
     Initiates a migration and tracks its progress.
+    .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Validate -SourceResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/Redis/redis1" -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1" -MigrateData
+    Validates a migration that includes cache data. Pass -MigrateData to the subsequent Migrate action as well.
     .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Migrate -SourceResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/Redis/redis1" -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1" -ForceMigrate $true
     Initiates a migration and forces migration when parity validation returns warnings.
     .\Azure-Redis-Migration-Arm-Rest-Api-Utility.ps1 -Action Status -TargetResourceId "/subscriptions/xxxxx/resourceGroups/rg1/providers/Microsoft.Cache/redisEnterprise/amr1"
@@ -48,6 +52,9 @@ param
 
     [Parameter()]
     [bool] $ForceMigrate = $false,
+
+    [Parameter()]
+    [switch] $MigrateData = $false,
 
     [Parameter()]
     [switch] $TrackMigration = $false,
@@ -187,7 +194,8 @@ function Wait-ForMigration
     $statusPath = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Cache/RedisEnterprise/$AmrCacheName/migrations/default"
     $state = "InProgress"
     $attempt = 0
-    $maxAttempts = 60  # 30 minutes max (30s intervals)
+    # Data migration adds a synchronization phase before cutover, so allow more time for it.
+    $maxAttempts = if ($MigrateData.IsPresent) { 120 } else { 60 }  # 60 / 30 minutes max (30s intervals)
     $transientErrors = 0
     $maxTransientErrors = 5
 
@@ -226,7 +234,7 @@ function Wait-ForMigration
         "Succeeded" { Write-Host "Operation completed successfully." -ForegroundColor Green }
         "Failed"    { Write-Host "Operation failed." -ForegroundColor Red }
         "Canceled"  { Write-Host "Operation was canceled." }
-        default     { Write-Host "Timed out waiting for operation to complete (last state: $state)." -ForegroundColor Red }
+        default     { Write-Host "Timed out waiting for operation to complete (last state: $state). The operation may still be running — use -Action Status to check." -ForegroundColor Red }
     }
 }
 
@@ -245,9 +253,12 @@ switch ($Action)
                 cacheResourceType = "AzureCacheForRedis";
                 forceMigrate      = $ForceMigrate;
                 switchDns         = $true;
-                skipDataMigration = $true;
+                skipDataMigration = -not $MigrateData.IsPresent;
             };
         } | ConvertTo-Json -Depth 3
+
+        $dataMigrationMode = if ($MigrateData.IsPresent) { "enabled" } else { "disabled" }
+        Write-Host "Data migration: $dataMigrationMode"
 
         if ($TrackMigration.IsPresent)
         {
@@ -305,10 +316,12 @@ switch ($Action)
         $payload = @{
             properties = @{
                 sourceResourceId  = $SourceResourceId;
-                skipDataMigration = $true;
+                skipDataMigration = -not $MigrateData.IsPresent;
             };
         } | ConvertTo-Json -Depth 3
 
+        $dataMigrationMode = if ($MigrateData.IsPresent) { "enabled" } else { "disabled" }
+        Write-Host "Data migration: $dataMigrationMode"
         Write-Host "This command will validate whether a migration can be performed between the source and target caches."
         Invoke-ArmRest -Method POST -Path "${migrationPath}/validate" -Body $payload | Out-Null
 
