@@ -95,16 +95,16 @@ The migration utility supports four actions: **Validate → Migrate → Status �
 
 Determine the user's choice before running Validate:
 
-- The user asked for cache data to be migrated → use `-MigrateData` / `--migrate-data`.
-- The user said they do not need cache data migrated → omit it.
 - The user did not mention cache data → ask `Should the migration copy the cache data from <source cache> to <target cache>?`.
+- The user asked for cache data to be migrated → use `-MigrateData` / `--migrate-data`.
+- The user said they do not need cache data migrated → omit the `-MigrateData` / `--migrate-data` flags.
 
 Use the same choice for Validate and Migrate.
 
 If the user has chosen to migrate cache data, do the following:
 
-- Compare the source SKU's memory size in [SKU Mapping](sku-mapping.md) against the target SKU's memory size in [AMR SKU Specifications](amr-sku-specs.md). If the target is smaller, warn the user, naming both sizes, that keys may be silently evicted or the migration may fail if the target cannot hold the source data.
-- Run `scripts/get_acr_metrics.ps1` or `scripts/get_acr_metrics.sh` to read the source cache's actual peak **Used Memory RSS**, and tell the user whether it fits within the target's memory size.
+- Warn the user that migrating cache data clears all existing data in the target AMR database, including keys that do not conflict with source keys. Ask the user to confirm that this data can be discarded before proceeding.
+- Run `scripts/get_acr_metrics.ps1` or `scripts/get_acr_metrics.sh` to read the source cache's actual peak **Used Memory RSS**, and tell the user whether it fits within the target SKU's memory size ([AMR SKU Specifications](amr-sku-specs.md)).
 
 ### 1. Validate
 
