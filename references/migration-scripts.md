@@ -31,10 +31,8 @@ POST {basePath}/validate?api-version=2025-08-01-preview
 **Request body**:
 ```json
 {
-  "properties": {
-    "sourceResourceId": "/subscriptions/.../Microsoft.Cache/Redis/{acrName}",
-    "skipDataMigration": true
-  }
+  "sourceResourceId": "/subscriptions/.../Microsoft.Cache/Redis/{acrName}",
+  "skipDataMigration": true
 }
 ```
 

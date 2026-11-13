@@ -314,10 +314,8 @@ switch ($Action)
     "Validate"
     {
         $payload = @{
-            properties = @{
-                sourceResourceId  = $SourceResourceId;
-                skipDataMigration = -not $MigrateData.IsPresent;
-            };
+            sourceResourceId  = $SourceResourceId;
+            skipDataMigration = -not $MigrateData.IsPresent;
         } | ConvertTo-Json -Depth 3
 
         $dataMigrationMode = if ($MigrateData.IsPresent) { "enabled" } else { "disabled" }

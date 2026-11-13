@@ -307,7 +307,7 @@ case "$ACTION_LOWER" in
         payload=$(jq -n \
             --arg sourceId "$SOURCE_RESOURCE_ID" \
             --argjson skipDataMigration "$SKIP_DATA_MIGRATION" \
-            '{properties: {sourceResourceId: $sourceId, skipDataMigration: $skipDataMigration}}')
+            '{sourceResourceId: $sourceId, skipDataMigration: $skipDataMigration}')
 
         arm_rest POST "${BASE_URL}/validate" "$payload"
         ;;
